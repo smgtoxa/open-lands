@@ -1,0 +1,58 @@
+# Roland's Manor: the fireplace's burnt scroll, the niche, the Orc Leader, Roland's hiding place and death,
+# his key and chest (coins, coins, the saber), then out to the forest.
+walk:38
+face:0
+game:202:77
+wait:2
+next:1
+game:202:77
+wait:2
+next:1
+game:202:77
+wait:2
+next:1
+stow
+expect:say:Burnt Scroll taken
+walk:227
+face:2
+press
+walk:228
+face:2
+pick
+expect:say:Oil Flask taken
+walk:76
+wait:3
+next:1
+fight:120
+walk:75
+fight:60
+face:3
+press
+wait:3
+walk:73
+wait:3
+next:8
+expect:say:They have stolen the Ruby of Truth
+walk:41
+take
+face:0
+hold:166
+press
+wait:3
+press
+wait:3
+press
+wait:3
+press
+wait:3
+stow
+expect:say:If I don't take these coins
+expect:item:102
+equip
+walk:199
+wait:4
+next:2
+expect:level:3
+log
+save
+shot:04-end

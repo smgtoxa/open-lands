@@ -1,0 +1,205 @@
+/* The fantasy interface (Settings > "Fantasy interface", the root's theme-fantasy class): Kenney's CC0 gold
+   frames over dark bronze (Assets/Resources/UI, tools/gen_ui_art.py) and Cinzel headings (the font-family rules
+   are CssLayout.HostFonts, set in HostMain). Colours and pictures only: no rule here moves a box. */
+
+.theme-fantasy {
+  background-color: #0a0907;
+  background-image: resource("UI/page");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+  color: #dccba0;
+}
+
+/* side panels, the message log, the location plate: the ornate frame */
+.theme-fantasy .panel,
+.theme-fantasy .ui-messages,
+.theme-fantasy .status {
+  border-color: rgba(0, 0, 0, 0);
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/panel");
+  -unity-slice-left: 10;
+  -unity-slice-top: 10;
+  -unity-slice-right: 10;
+  -unity-slice-bottom: 10;
+}
+.theme-fantasy .status {
+  color: #c9ad66;
+}
+
+/* windows: the double frame */
+.theme-fantasy .modal-box,
+.theme-fantasy .inventory-overlay,
+.theme-fantasy .camp-sheet {
+  border-color: rgba(0, 0, 0, 0);
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/modal");
+  -unity-slice-left: 10;
+  -unity-slice-top: 10;
+  -unity-slice-right: 10;
+  -unity-slice-bottom: 10;
+  color: #e6d3a0;
+}
+.theme-fantasy .modal {
+  background-color: rgba(4, 3, 2, .78);
+}
+
+/* party cards: corner ornaments; the card's own border still marks the selected hero */
+.theme-fantasy .ui-card {
+  border-color: #4a3d24;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/card");
+  -unity-slice-left: 5;
+  -unity-slice-top: 5;
+  -unity-slice-right: 5;
+  -unity-slice-bottom: 5;
+}
+.theme-fantasy .ui-card.selected {
+  border-color: #e0bd68;
+}
+
+/* the 3D view: a gold edge */
+.theme-fantasy .stage {
+  border-color: #8a6d36;
+}
+
+/* buttons: a raised bronze face with corner squares; lighter under the pointer, sunken when pressed */
+.theme-fantasy .tag-button,
+.theme-fantasy .ui-quick,
+.theme-fantasy .ui-log-filter {
+  border-color: #5c4a29;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/button");
+  -unity-slice-left: 4;
+  -unity-slice-top: 4;
+  -unity-slice-right: 4;
+  -unity-slice-bottom: 4;
+  color: #e8d49c;
+}
+.theme-fantasy .tag-button:hover,
+.theme-fantasy .ui-quick:hover,
+.theme-fantasy .ui-log-filter:hover {
+  border-color: #b8914a;
+  background-image: resource("UI/button-hover");
+  color: #fff0c0;
+}
+.theme-fantasy .tag-button:active {
+  background-image: resource("UI/button-down");
+}
+.theme-fantasy .ui-log-filter.on {
+  border-color: #e0bd68;
+  color: #fff0c0;
+}
+.theme-fantasy .game-button {
+  border-color: #c9a75a;
+  background-image: resource("UI/button");
+  -unity-slice-left: 4;
+  -unity-slice-top: 4;
+  -unity-slice-right: 4;
+  -unity-slice-bottom: 4;
+  color: #f6dc96;
+}
+.theme-fantasy .game-button:hover {
+  border-color: #f0d07c;
+  background-image: resource("UI/button-hover");
+  color: #fff4cc;
+}
+
+/* the page's bare buttons (no border, no fill) stay bare */
+.theme-fantasy .quest-pin, .theme-fantasy .quest-pin:hover,
+.theme-fantasy .hit-area, .theme-fantasy .hit-area:hover,
+.theme-fantasy .camp-spot, .theme-fantasy .camp-spot:hover,
+.theme-fantasy .camp-station-art, .theme-fantasy .camp-station-art:hover,
+.theme-fantasy .spell .star, .theme-fantasy .spell .star:hover {
+  background-image: none;
+}
+/* the champion portraits: see-through buttons over the game picture */
+.theme-fantasy .character-button, .theme-fantasy .character-button:hover {
+  background-image: none;
+}
+
+/* item wells: sunken slots (after the buttons: an inventory slot is a button) */
+.theme-fantasy .ui-slot,
+.theme-fantasy .inventory-grid .tag-button,
+.theme-fantasy .ui-equip,
+.theme-fantasy .itemdb-tile,
+.theme-fantasy .char-slot {
+  border-color: #3e3220;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/slot");
+  -unity-slice-left: 3;
+  -unity-slice-top: 3;
+  -unity-slice-right: 3;
+  -unity-slice-bottom: 3;
+}
+.theme-fantasy .ui-slot:hover,
+.theme-fantasy .inventory-grid .tag-button:hover,
+.theme-fantasy .itemdb-tile:hover,
+.theme-fantasy .char-slot:hover {
+  border-color: #b8914a;
+  background-image: resource("UI/slot");
+}
+
+/* tabs: the open one raised in bronze */
+.theme-fantasy .tabs {
+  border-bottom-color: #5c4a29;
+}
+.theme-fantasy .tab {
+  color: #a8987a;
+}
+.theme-fantasy .tab:hover {
+  color: #f4e2b0;
+}
+.theme-fantasy .tab.active {
+  color: #ffd877;
+  border-color: #c9a75a;
+  background-image: resource("UI/button-hover");
+}
+
+/* fields */
+.theme-fantasy .input-type-text,
+.theme-fantasy .input-type-search,
+.theme-fantasy .input-type-number,
+.theme-fantasy .tag-select {
+  border-color: #5c4a29;
+  background-color: #0d0b08;
+  color: #e8d49c;
+}
+
+/* bars */
+.theme-fantasy .ui-bar {
+  border-color: #4a3d24;
+  background-color: #070605;
+}
+
+/* headings (the font is Cinzel: CssLayout.HostFonts) */
+.theme-fantasy .tag-h1 {
+  color: #e6c472;
+}
+.theme-fantasy .panel .tag-h2,
+.theme-fantasy .modal-head .tag-h2,
+.theme-fantasy .inventory-head .tag-h2 {
+  color: #d9b45e;
+  -unity-font-style: normal;
+}
+.theme-fantasy .modal-box .tag-h3 {
+  color: #c9a75a;
+  -unity-font-style: normal;
+}
+.theme-fantasy .ui-name {
+  color: #f0d488;
+  -unity-font-style: normal;
+}
+
+/* checkboxes: a gold tick in a bronze well */
+.theme-fantasy .input-checkbox .unity-toggle__checkmark {
+  border-color: #6b5631;
+  background-color: #0d0b08;
+}
+.theme-fantasy .input-checkbox:checked .unity-toggle__checkmark {
+  border-color: #d9b45e;
+  background-color: #d9b45e;
+  -unity-background-image-tint-color: #1a140b;
+}
+.theme-fantasy .tag-select .unity-base-popup-field__arrow {
+  -unity-background-image-tint-color: #d9b45e;
+}

@@ -1,0 +1,32 @@
+# Southland Forest: the Grey Eagle (Timothy joins; Philip's magnet stone), then the road to Roland's Manor.
+walk:688
+face:1
+game:189:58
+wait:5
+next:1
+game:148:90
+wait:3
+next:4
+game:152:63
+wait:3
+next:4
+game:303:79
+wait:3
+next:4
+game:24:78
+wait:3
+next:4
+expect:say:This looks cozy
+expect:say:Are you by chance Timothy of Gladstone
+expect:say:Take this magnet stone
+expect:say:I am pleased to join you
+expect:hero:Timothy
+equip
+walk:772
+wait:4
+next:2
+expect:say:Someone has attacked
+expect:level:4
+log
+save
+shot:03-end

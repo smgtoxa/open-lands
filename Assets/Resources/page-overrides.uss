@@ -1,0 +1,685 @@
+/* Hand rules over the generated page.uss (see tools/gen_uss.mjs). */
+
+/* align-content: start - the tile grid is as tall as its tiles, not stretched to the height of the details
+   card beside it (Yoga stretches a single wrapped line to the whole box: the bestiary's few tiles came out
+   full height); tiles in one row still share the row's height, as in CSS grid */
+.itemdb-grid {
+  align-self: flex-start;
+}
+
+/* the page's 30px icon circle is content-box (30px drawing + 4px padding each side); UI Toolkit counts the padding
+   inside the 30px the grid gives it, so the drawing came out 20px: less padding, the drawing near the page's size */
+.ach-card .ach-icon {
+  padding: 2px;
+}
+
+/* People: a card's text column shrinks to the card and wraps (a browser flex item holding text may shrink to its
+   longest word; the generated "* { flex-shrink: 0 }" kept it as wide as its longest quote, past the card) */
+.npc-card > * {
+  flex-shrink: 1;
+  min-width: 0;
+}
+.npc-card > .npc-thumb {
+  flex-shrink: 0;
+}
+
+/* Settings in tabs (Web.settingsTabs): the window keeps one height from tab to tab */
+.settings-box {
+  height: 640px;
+}
+.settings-box .tab-page {
+  flex-grow: 1;
+  flex-shrink: 1;
+}
+
+/* the quick-spell icon in the middle of its button (Yoga left it at the start) */
+.spell-pick {
+  justify-content: center;
+  align-items: center;
+}
+
+/* the Journal's Guide tab (Web.Guide.cs) */
+.guide-count {
+  margin-left: 10px;
+  color: #a8987a;
+  -unity-text-align: middle-left;
+}
+.guide-cat {
+  margin: 14px 0 6px;
+  color: #c9a75a;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.guide-card {
+  margin-bottom: 6px;
+  padding: 8px 12px;
+  border-width: 1px;
+  border-color: #4a3d24;
+  background-color: rgba(28, 22, 14, .7);
+}
+.guide-card:hover {
+  border-color: #c9a75a;
+  background-color: rgba(52, 41, 24, .8);
+}
+.guide-name {
+  color: #f0d488;
+  font-size: 15px;
+}
+.guide-sum {
+  margin: 3px 0 0;
+  color: #a8987a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.guide-back {
+  align-self: flex-start;
+  font-size: 14px;
+  padding: 5px 12px;
+}
+.guide-title {
+  margin: 0 0 4px;
+  color: #f0d488;
+  font-size: 22px;
+}
+.guide-article .guide-cat {
+  margin: 14px 0 2px;
+}
+.guide-text {
+  margin: 8px 12px 0;
+  color: #e3d5ae;
+  white-space: normal;
+}
+.guide-point {
+  margin: 4px 12px 0 24px;
+  color: #e3d5ae;
+  white-space: normal;
+}
+.guide-shot {
+  margin: 10px 12px 2px;
+  border-width: 1px;
+  border-color: #6b5631;
+  flex-shrink: 0;
+}
+
+/* The Lands: the parchment world map (FullMap.renderLands, tools/gen_world_map.py) */
+.wm-map {
+  width: 100%;
+  height: 560px;
+  flex-shrink: 0;
+  border-width: 1px;
+  border-color: #6b5631;
+  overflow: hidden;
+}
+.wm-fog {
+  position: absolute;
+}
+.wm-here {
+  position: absolute;
+  border-width: 3px;
+  border-color: rgba(150, 30, 20, .85);
+  border-top-left-radius: 50%;
+  border-top-right-radius: 50%;
+  border-bottom-left-radius: 50%;
+  border-bottom-right-radius: 50%;
+}
+.wm-region {
+  position: absolute;
+  translate: -50% 0;
+  align-items: center;
+  padding: 2px 8px 3px;
+  border-width: 1px;
+  border-color: rgba(0, 0, 0, 0);
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+  border-bottom-left-radius: 3px;
+  border-bottom-right-radius: 3px;
+}
+.wm-region.known {
+  background-color: rgba(222, 204, 166, .88);
+  border-color: rgba(58, 40, 20, .55);
+}
+.wm-region.known:hover {
+  background-color: rgba(240, 226, 190, .97);
+  border-color: #3a2814;
+}
+.wm-region.here {
+  border-color: rgba(150, 30, 20, .85);
+}
+.wm-name {
+  color: rgba(58, 40, 20, .6);
+  font-size: 15px;
+  white-space: nowrap;
+  -unity-font-style: italic;
+}
+.wm-region.known .wm-name {
+  color: #2b1a0a;
+  -unity-font-style: normal;
+}
+.wm-sub {
+  color: #5a4228;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.wm-region.here .wm-sub {
+  color: #8b1a12;
+}
+
+/* Journal log (Web.renderJournal): filter chips, then one line per entry: time, icon or face, text, count */
+.jl-chips {
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin: 0 0 8px;
+}
+.jl-chip {
+  flex-direction: row;
+  align-items: center;
+  margin-right: 6px;
+}
+.jl-row {
+  flex-direction: row;
+  align-items: flex-start;
+  padding: 3px 4px;
+  border-bottom-width: 1px;
+  border-bottom-color: rgba(109, 99, 63, .18);
+}
+.jl-time {
+  width: 44px;
+  flex-shrink: 0;
+  color: #7d735c;
+  font-size: 12px;
+  padding-top: 2px;
+}
+.jl-icon {
+  width: 14px;
+  height: 14px;
+  margin: 3px 8px 0 4px;
+  flex-shrink: 0;
+  color: #9c8a5e;
+}
+.jl-row .journal-face {
+  margin: 0 6px 0 0;
+  flex-shrink: 0;
+}
+.jl-text {
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-width: 0;
+  white-space: normal;
+  color: #d8cdae;
+}
+.jl-who {
+  color: #f0d488;
+}
+.jl-talk .jl-text {
+  color: #f1e6c8;
+}
+.jl-items .jl-icon {
+  color: #8fbf6a;
+}
+.jl-system .jl-text {
+  color: #8a8375;
+}
+.jl-warn .jl-text {
+  color: #f0a070;
+}
+.jl-count {
+  flex-shrink: 0;
+  margin-left: 8px;
+  padding: 0 6px;
+  font-size: 11px;
+  color: #1a140b;
+  background-color: #c9a75a;
+  border-top-left-radius: 7px;
+  border-top-right-radius: 7px;
+  border-bottom-left-radius: 7px;
+  border-bottom-right-radius: 7px;
+}
+.jl-level {
+  margin: 14px 0 4px;
+  padding-bottom: 3px;
+  border-bottom-width: 1px;
+  border-bottom-color: #6b5631;
+  color: #d9b45e;
+}
+
+/* Journal statistics (Web.Stats.cs) */
+.st-board {
+  flex-direction: column;
+}
+.st-head {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-width: 1px;
+  border-color: #6b5631;
+  background-color: rgba(28, 22, 14, .8);
+}
+.st-party {
+  flex-direction: row;
+  flex-wrap: wrap;
+  flex-shrink: 1;
+}
+.st-hero {
+  flex-direction: row;
+  align-items: center;
+  margin-right: 22px;
+}
+.st-face {
+  width: 48px;
+  height: 48px;
+  margin-right: 10px;
+  border-width: 1px;
+  border-color: #c9a75a;
+}
+.st-hero-name {
+  color: #f0d488;
+  font-size: 16px;
+}
+.st-hero-sub {
+  color: #a8987a;
+  font-size: 12px;
+}
+.st-when {
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+.st-big {
+  color: #f0d488;
+  font-size: 30px;
+}
+.st-where {
+  color: #c9b98f;
+  font-size: 13px;
+}
+.st-label {
+  color: #a8987a;
+  font-size: 12px;
+}
+.st-title {
+  margin: 18px 0 8px;
+  color: #c9a75a;
+}
+.st-tiles {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+.st-tile {
+  flex-direction: row;
+  align-items: center;
+  width: 24%;
+  margin: 0 1% 8px 0;
+  padding: 10px 12px;
+  border-width: 1px;
+  border-color: #4a3d24;
+  background-color: rgba(28, 22, 14, .7);
+}
+.st-icon {
+  width: 22px;
+  height: 22px;
+  margin-right: 10px;
+  flex-shrink: 0;
+  color: #c9a75a;
+}
+.st-value {
+  color: #f6e2a8;
+  font-size: 20px;
+}
+.st-bars {
+  flex-direction: column;
+}
+.st-bar-row {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 7px;
+}
+.st-bar-row .st-icon {
+  width: 16px;
+  height: 16px;
+  margin: 0 22px 0 6px;
+}
+.st-bar-label {
+  width: 170px;
+  flex-shrink: 0;
+  color: #d8cdae;
+}
+.st-track {
+  flex-grow: 1;
+  height: 12px;
+  border-width: 1px;
+  border-color: #4a3d24;
+  background-color: #0d0b08;
+}
+.st-fill {
+  height: 100%;
+  background-color: #c9a75a;
+}
+.st-red {
+  background-color: #a8432e;
+}
+.st-blue {
+  background-color: #4f7fb0;
+}
+.st-bar-value {
+  width: 90px;
+  flex-shrink: 0;
+  -unity-text-align: middle-right;
+  color: #f0d488;
+}
+.st-thumb {
+  width: 28px;
+  height: 28px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+/* the log's chip in use: raised like the open tab */
+.theme-fantasy .jl-chip.on {
+  border-color: #c9a75a;
+  background-image: resource("UI/button-hover");
+  color: #ffd877;
+}
+.jl-chip.on {
+  border-color: #c9a75a;
+  color: #ffd877;
+}
+
+/* Settings rows (Web.settingsTabs): the words on the left, every control in one 220px column on the right,
+   every button, list, field and key the same size */
+.settings-box .setting {
+  min-height: 44px;
+  padding: 6px 0;
+}
+.set-text {
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-width: 0;
+  margin-right: 16px;
+  white-space: normal;
+}
+.set-ctl {
+  width: 220px;
+  flex-shrink: 0;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+}
+.set-ctl .tag-button,
+.set-ctl .tag-select,
+.set-ctl .input-type-text,
+.keybinds .tag-input,
+.keybinds .tag-button {
+  width: 220px;
+  height: 30px;
+  margin: 0;
+  white-space: nowrap;
+  -unity-text-align: middle-center;
+}
+.set-ctl .tag-select,
+.set-ctl .input-type-text {
+  -unity-text-align: middle-left;
+  padding: 2px 8px;
+}
+.keybinds .tag-button {
+  margin-top: 6px;
+}
+/* a list's long choice shrinks (with "...") so its arrow stays inside; text in the middle of the box's height */
+.set-ctl .tag-select {
+  justify-content: center;
+  overflow: hidden;
+}
+.set-ctl .tag-select .unity-base-popup-field__input {
+  flex-shrink: 1;
+  min-width: 0;
+  align-items: center;
+}
+.set-ctl .tag-select .unity-base-popup-field__text {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.set-ctl .tag-select .unity-base-popup-field__arrow {
+  flex-shrink: 0;
+}
+.set-ctl .input-type-text,
+.set-ctl .input-type-text .unity-text-field__input,
+.keybinds .tag-input .unity-text-field__input {
+  justify-content: center;
+  -unity-text-align: middle-left;
+}
+/* keys: framed like the other controls, the key in the middle */
+.keybinds .tag-input {
+  border-color: #6b5631;
+  background-color: #0d0b08;
+  color: #f0d488;
+  -unity-text-align: middle-center;
+}
+.keybinds .tag-input .unity-text-field__input {
+  -unity-text-align: middle-center;
+}
+.keybinds .tag-input:focus {
+  border-color: #ffd877;
+}
+.keybinds .tag-button {
+  align-self: flex-end;
+}
+.set-ctl .tag-select .unity-base-field,
+.set-ctl .tag-select .unity-base-popup-field {
+  flex-shrink: 1;
+  min-width: 0;
+  margin: 0;
+}
+.keybinds .input-type-text {
+  justify-content: center;
+}
+
+/* Journal spell book (Web.SpellBook.cs): the known spells on the left, the open one's page on the right */
+.sb-wrap {
+  flex-direction: row;
+  align-items: flex-start;
+}
+.sb-list {
+  width: 210px;
+  flex-shrink: 0;
+  margin-right: 16px;
+}
+.sb-item {
+  flex-direction: row;
+  align-items: center;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-width: 1px;
+  border-color: #4a3d24;
+  background-color: rgba(28, 22, 14, .7);
+}
+.sb-item:hover {
+  border-color: #c9a75a;
+}
+.sb-item.on {
+  border-color: #e0bd68;
+  background-color: rgba(60, 46, 24, .85);
+}
+.sb-item-name {
+  margin-left: 10px;
+  color: #f0d488;
+  font-size: 15px;
+}
+.sb-page {
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-width: 0;
+  padding: 14px 18px;
+  border-width: 1px;
+  border-color: #6b5631;
+  background-color: rgba(28, 22, 14, .6);
+}
+.sb-head {
+  flex-direction: row;
+  align-items: center;
+}
+.sb-title-box {
+  margin-left: 14px;
+}
+.sb-title {
+  margin: 0;
+  color: #f0d488;
+  font-size: 24px;
+}
+.sb-school {
+  color: #a8987a;
+}
+.sb-about {
+  margin: 10px 0 0;
+  color: #e3d5ae;
+  white-space: normal;
+}
+.sb-sub {
+  margin: 16px 0 6px;
+  color: #c9a75a;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.sb-table {
+  border-width: 1px;
+  border-color: #4a3d24;
+}
+.sb-row {
+  flex-direction: row;
+  padding: 5px 10px;
+  border-bottom-width: 1px;
+  border-bottom-color: rgba(109, 99, 63, .25);
+}
+.sb-hrow {
+  background-color: rgba(60, 46, 24, .6);
+}
+.sb-hrow > * {
+  color: #c9a75a;
+}
+.sb-c1 {
+  width: 60px;
+  flex-shrink: 0;
+  color: #f0d488;
+}
+.sb-c2 {
+  width: 80px;
+  flex-shrink: 0;
+  color: #8fb6e8;
+}
+.sb-c3 {
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-width: 0;
+  color: #e3d5ae;
+  white-space: normal;
+}
+.sb-point {
+  margin: 3px 0 0;
+  color: #e3d5ae;
+  white-space: normal;
+}
+/* the journal's nine tabs on one row */
+#journal-overlay .tab {
+  padding: 6px 9px;
+}
+
+/* the bag in pages of 48 (Web.renderInvPager) */
+.inv-pager {
+  flex-direction: row;
+  justify-content: center;
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+.inv-page {
+  min-width: 36px;
+  height: 30px;
+  margin: 0 3px;
+  -unity-text-align: middle-center;
+}
+.inv-page.on {
+  border-color: #e0bd68;
+  color: #ffd877;
+}
+.theme-fantasy .inv-page.on {
+  border-color: #e0bd68;
+  background-image: resource("UI/button-hover");
+  color: #ffd877;
+}
+
+/* reagent chips with their pictures */
+.reagent {
+  padding: 3px 10px 3px 4px;
+  margin: 0 6px 6px 0;
+}
+.reagent-icon {
+  width: 32px;
+  height: 32px;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+/* the teleport's vortex and glow in the middle of the scene (the page centres them with the grid's place-items) */
+.teleport-vortex,
+.teleport-overlay > .ps-after {
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+}
+
+/* camp sheets: one box of a fixed size inside the scene (it was as tall as its list and ran past the scene's
+   bottom, scrolling as a whole and covering the camp's panel); only the list in it scrolls */
+.camp-sheet {
+  top: 8px;
+  bottom: 8px;
+  width: 92%;
+  max-height: none;
+  flex-direction: column;
+}
+.camp-pane {
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+.imp-list, .craft-list, .stash-list {
+  max-height: none;
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-height: 0;
+}
+.stash-cols {
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-height: 0;
+}
+.stash-col {
+  flex-direction: column;
+  min-height: 0;
+}
+.camp-sheet-head, .imp-tabs, .stash-head, .rest-note, .imp-tools {
+  flex-shrink: 0;
+}
+.imp-tools {
+  flex-direction: row;
+  align-items: center;
+  margin: 0 0 6px;
+}
+.imp-tools .tag-input, .imp-tools .tag-select {
+  background-color: #15110c;
+  color: #e3ce92;
+  border-width: 1px;
+  border-color: #4a4230;
+  padding: 3px 6px;
+  font-size: 13px;
+  margin-right: 6px;
+}
+
+/* the title's buttons, one above the other: Continue, New game, Settings (Unity build: settings before a game) */
+.continue-button {
+  bottom: 32%;
+}
+.newgame-button {
+  bottom: 20%;
+}

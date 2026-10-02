@@ -1,0 +1,45 @@
+# New game through the title screen, then Gladstone Keep: the King, the library and the Atlas, Geron's
+# writ, and out of the gate to the Northland Forest.
+click:.title-button
+wait:2
+click:.character-button
+wait:1.5
+click:.confirm-panel .game-button
+wait:3
+click:.ui-choice
+wait:2
+log
+walk:273
+next:8
+expect:say:retrieve it from Roland's estate
+expect:item:185
+walk:362
+face:2
+hold:185
+press
+wait:2
+expect:say:Library key taken
+walk:392
+face:1
+press
+wait:3
+next:2
+expect:flag:252
+walk:427
+face:3
+key:ArrowUp
+wait:3
+next:8
+game:280:114
+wait:3
+next:2
+expect:item:244
+expect:flag:11
+expect:say:Timothy is at the Grey Eagle
+walk:621
+wait:4
+next:2
+expect:level:2
+log
+save
+shot:01-end

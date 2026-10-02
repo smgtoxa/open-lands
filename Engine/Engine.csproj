@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The web engine (src/game, src/formats), transliterated 1:1. See docs/port/PORTING.md.
+       Built outside Unity (newer C#); build-engine.sh drops the DLL into Assets/Plugins/Lol. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>Lol.Engine</AssemblyName>
+    <RootNamespace>Lol</RootNamespace>
+    <NoWarn>CS0162;CS0164;CS0168;CS0219;CS0414;CS0649;CS1998;CS4014;CS0169</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,8 @@
+Camp station pictures (made by tools/gen_camp_scenes.py; room walls and floors from Poly Haven materials, CC0)
+
+- Travelling circle: "Animated Portal or Wormhole" by Hansjoerg Malthaner (Varkalandar),
+  https://opengameart.org/content/animated-portal-or-wormhole-several-variants , CC-BY 4.0
+- Cauldron: "cauldrons" by Kiririnochka, https://opengameart.org/content/cauldrons , CC0
+- Stash chest: "Treasure Chest" by Rico Cilliers, Poly Haven, https://polyhaven.com/a/treasure_chest , CC0
+- Imp trader: "[LPC] Imp 2" by Stephen "Redshrike" Challener, commissioned by William.Thompsonj,
+  https://opengameart.org/content/lpc-imp-2 , CC-BY 4.0

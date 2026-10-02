@@ -1,0 +1,36 @@
+# Unity generated
+/Library/
+/Temp/
+/Obj/
+/Logs/
+/UserSettings/
+/MemoryCaptures/
+*.csproj
+*.slnx
+*.sln
+.vscode/
+
+# build output
+/Build/
+bin/
+obj/
+# the engine DLL build-engine.sh makes (its .meta files stay, so Unity's references keep their GUIDs)
+/Assets/Plugins/Lol/*.dll
+/Assets/Plugins/Lol/*.pdb
+# copied from the web project by build.sh
+/Assets/StreamingAssets/web/
+
+# the original game's data files (copyrighted) and test output
+/GameData/
+/Shots/
+/Legacy/Plugins/LolCore/*.dll
+/Legacy/Plugins/LolCore/*.pdb
+/fresh
+__pycache__/
+
+# the guide's screenshots show the original game's art: made locally (tools/guide_shots.py), never published
+/Assets/Resources/Guide/*.png
+/Assets/Resources/Guide/*.png.meta
+# the engine's and the tracer's own project files are source (the Unity-generated ones above are not)
+!/Engine/Engine.csproj
+!/Trace/Trace.csproj

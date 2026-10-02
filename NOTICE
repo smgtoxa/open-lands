@@ -1,0 +1,23 @@
+This project derives file format behavior and will derive game-engine behavior
+from ScummVM's GPLv3 Kyra engine:
+
+  https://github.com/scummvm/scummvm/tree/master/engines/kyra
+
+Initial format references:
+
+- engines/kyra/resource/resource_intern.cpp (Westwood PAK)
+- engines/kyra/graphics/screen.cpp (CPS, LCW and palette decoding)
+- engines/kyra/engine/lol.cpp (Lands of Lore startup flow)
+- engines/kyra/sequence/sequences_lol.cpp (prologue flow)
+
+ScummVM is copyright its contributors. This project is not affiliated with
+ScummVM, Electronic Arts, Westwood Studios, or GOG.
+
+The OPL3 emulator in src/platform/opl3.mjs is a JavaScript port of Nuked OPL3
+v1.8, copyright (C) 2013-2020 Nuke.YKT, licensed under the GNU Lesser General
+Public License version 2.1 or later:
+
+  https://github.com/nukeykt/Nuked-OPL3
+
+The AdLib music driver in src/platform/adlib-driver.mjs is ported from
+engines/kyra/sound/drivers/adlib.cpp and sound_pc_v1.cpp (GPLv3).

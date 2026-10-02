@@ -1,0 +1,127 @@
+// The browser's file handling on Windows: <input type="file"> is the system "Open" dialog (comdlg32), and a
+// download lands in the user's Downloads folder, as Chrome saves it without asking.
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+
+namespace LolHost
+{
+    public static class FileDialog
+    {
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        struct OpenFileName
+        {
+            public int lStructSize;
+            public IntPtr hwndOwner, hInstance;
+            public string lpstrFilter;
+            public string lpstrCustomFilter;
+            public int nMaxCustFilter, nFilterIndex;
+            public IntPtr lpstrFile;
+            public int nMaxFile;
+            public string lpstrFileTitle;
+            public int nMaxFileTitle;
+            public string lpstrInitialDir, lpstrTitle;
+            public int Flags;
+            public short nFileOffset, nFileExtension;
+            public string lpstrDefExt;
+            public IntPtr lCustData, lpfnHook;
+            public string lpTemplateName;
+            public IntPtr pvReserved;
+            public int dwReserved, FlagsEx;
+        }
+
+        [DllImport("comdlg32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        static extern bool GetOpenFileNameW(ref OpenFileName ofn);
+
+        [DllImport("user32.dll")]
+        static extern IntPtr GetActiveWindow();
+
+        /// <summary>The system "Open" dialog; null when cancelled (or not on Windows).</summary>
+        public static string Open(string title, string filterName, string pattern)
+        {
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            const int OFN_FILEMUSTEXIST = 0x1000, OFN_PATHMUSTEXIST = 0x800, OFN_NOCHANGEDIR = 0x8, OFN_EXPLORER = 0x80000;
+            var buffer = Marshal.AllocHGlobal(4096 * 2);
+            try
+            {
+                Marshal.WriteInt16(buffer, 0);
+                var ofn = new OpenFileName
+                {
+                    lStructSize = Marshal.SizeOf(typeof(OpenFileName)),
+                    hwndOwner = GetActiveWindow(),
+                    lpstrFilter = $"{filterName}\0{pattern}\0All files\0*.*\0\0",
+                    nFilterIndex = 1,
+                    lpstrFile = buffer,
+                    nMaxFile = 4096,
+                    lpstrInitialDir = Downloads(),
+                    lpstrTitle = title,
+                    Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_EXPLORER,
+                };
+                return GetOpenFileNameW(ref ofn) ? Marshal.PtrToStringUni(buffer) : null;
+            }
+            finally { Marshal.FreeHGlobal(buffer); }
+#else
+            return null;
+#endif
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        struct BrowseInfo
+        {
+            public IntPtr hwndOwner, pidlRoot;
+            public IntPtr pszDisplayName;
+            public string lpszTitle;
+            public uint ulFlags;
+            public IntPtr lpfn, lParam;
+            public int iImage;
+        }
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        static extern IntPtr SHBrowseForFolderW(ref BrowseInfo bi);
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        static extern bool SHGetPathFromIDListW(IntPtr pidl, IntPtr path);
+
+        [DllImport("ole32.dll")]
+        static extern void CoTaskMemFree(IntPtr pv);
+
+        /// <summary>The system "choose a folder" dialog (dialog.showOpenDialog openDirectory); null when cancelled.</summary>
+        public static string PickFolder(string title)
+        {
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            const uint BIF_RETURNONLYFSDIRS = 0x1, BIF_NEWDIALOGSTYLE = 0x40, BIF_NONEWFOLDERBUTTON = 0x200;
+            var name = Marshal.AllocHGlobal(260 * 2);
+            var path = Marshal.AllocHGlobal(1024 * 2);
+            try
+            {
+                var bi = new BrowseInfo { hwndOwner = GetActiveWindow(), pszDisplayName = name, lpszTitle = title, ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE | BIF_NONEWFOLDERBUTTON };
+                var pidl = SHBrowseForFolderW(ref bi);
+                if (pidl == IntPtr.Zero) return null;
+                try { return SHGetPathFromIDListW(pidl, path) ? Marshal.PtrToStringUni(path) : null; }
+                finally { CoTaskMemFree(pidl); }
+            }
+            finally { Marshal.FreeHGlobal(name); Marshal.FreeHGlobal(path); }
+#else
+            return null;
+#endif
+        }
+
+        /// <summary>The user's Downloads folder (where a browser saves a download).</summary>
+        public static string Downloads()
+        {
+            string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            return Directory.Exists(dir) ? dir : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        }
+
+        /// <summary>a.download = name; a.click(): the file in Downloads, "name (1).ext" when it exists already.</summary>
+        public static string Download(string name, byte[] bytes)
+        {
+            string dir = Downloads();
+            string path = Path.Combine(dir, name);
+            string stem = Path.GetFileNameWithoutExtension(name), ext = Path.GetExtension(name);
+            for (int n = 1; File.Exists(path); n += 1) path = Path.Combine(dir, $"{stem} ({n}){ext}");
+            File.WriteAllBytes(path, bytes);
+            return path;
+        }
+    }
+}

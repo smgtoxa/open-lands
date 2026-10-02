@@ -1,0 +1,40 @@
+# Back north: the Southland marina (100 crowns a head), Gladstone's gate, Scotia's attack on the King;
+# the court talks, Timothy stays, Baccata joins, Dawn's magic album.
+walk:526
+face:0
+key:ArrowUp
+wait:4
+next:1
+game:235:78
+wait:3
+next:5
+expect:say:100 crowns per passenger
+expect:level:2
+walk:74
+wait:4
+next:2
+walk:273
+wait:3
+next:12
+game:24:54
+wait:3
+next:2
+game:287:68
+wait:3
+next:2
+game:109:44
+wait:3
+next:2
+game:290:121
+wait:4
+next:6
+expect:say:I found the Mask
+expect:say:I am Baccata, Dawn's apprentice
+expect:say:Baccata will join you in Timothy's stead
+expect:say:This mystic album
+expect:hero:Baccata
+expect:flag:41
+equip
+log
+save
+shot:05-end

@@ -1,0 +1,5 @@
+Textured world materials (used by Host/TexturedBuilder.cs)
+
+Photo textures from Poly Haven (https://polyhaven.com), CC0 1.0 Universal (public domain), 1k diffuse maps:
+bark_brown_02, bark_willow, brown_mud_leaves_01, castle_wall_slates, forest_ground_04, forest_leaves_03, marble_01,
+plastered_wall_04, rock_boulder_dry, rock_surface, rock_wall_08, rocky_trail, wood_table_worn, worn_planks.

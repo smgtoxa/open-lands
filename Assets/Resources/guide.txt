@@ -1,0 +1,331 @@
+# Open Lands guide: the articles of the Journal's Guide tab (Web.Guide.cs reads this file).
+#   "= Category" starts a group, "## Title" an article, "img: NAME" shows Resources/Guide/NAME.png,
+#   "keys: words" adds search words, "- text" is a bullet, any other line is a paragraph.
+#   Lines starting with "#" and a space are comments. Please do not use em dashes.
+
+= Getting started
+
+## What is new in Open Lands
+img: overview
+keys: new features overview interface differences original
+Open Lands plays the original Lands of Lore: The Throne of Chaos from your own copy of the game, with the same story, maps and monsters. Around the scene window it adds a modern interface and a set of optional features the original never had.
+- A game screen around the scene window, carved in stone: the map with the compass and the lantern, actions, spells, the log, objectives, and the party along the bottom.
+- A party card for every hero with health, magic, skills and quick buttons.
+- A hotbar with ten slots for items and spells.
+- A journal with quests, a searchable log, a bestiary, an item database, statistics, achievements, people you met and this guide.
+- A camp where the party can sleep, brew potions, store gear and trade with an imp.
+- Save slots with pictures, checkpoints, autosave and export.
+- Many optional rules in Settings: difficulty, monsters that return, wounded monsters that flee, weapon wear, a randomizer and New game+.
+Every article in this guide covers one of these additions. Use the search box above to find a topic.
+
+## Keyboard reference
+keys: keys keyboard shortcuts hotkeys controls bindings remap
+Movement stays where it was in the original: arrow keys or WASD to step and slide, Q and E (or Home and Page Up) to turn. The rest are the default keys of Open Lands. Every one of them can be changed in Settings, Controls.
+- F: attack with the selected hero.
+- C: quick cast. The heroes take turns, each casting the spell chosen on their character screen.
+- I: inventory. J: journal. M: full map. N: show or hide the minimap.
+- B: stash the item in your hand into the inventory.
+- T: trade with the merchant in front of you.
+- O: rotate the marching order.
+- R: rest or make camp.
+- X: walk to the nearest unexplored passage.
+- F5: quick save. F9: quick load. F12: screenshot.
+- 1 to 0: use the hotbar slots. Shift and 1 to 4: select a hero.
+- Space or Enter: continue a dialogue. Esc: skip a cutscene, close a window or open the menu.
+
+= Party and combat
+
+## Party cards and selecting a hero
+img: party
+keys: hero select portrait card health magic party shift
+Each hero has a card under the scene. It shows the portrait, health and magic bars with numbers, might and protection, and the fighter, rogue and mage levels with experience bars.
+- Click a card, or press Shift and 1 to 4, to select that hero. The selected card has a bright gold frame.
+- Quick actions (attack, quick cast, hotbar items and spells) are done by the selected hero. When that hero cannot act, the selection passes to the next one who can.
+- Click the portrait to open the character screen. Right-click it to use the item in your hand on that hero.
+- The bars pulse when health drops under a quarter or magic under a fifth.
+- Attack, Equip best and the hero's quick spell are buttons right on the card.
+
+## Character screen and equipment
+img: character
+keys: equipment paperdoll doll slots equip wear armour weapon ring character sheet
+Click a hero's portrait to open the character screen. Previous and Next move between heroes.
+- The left column shows the portrait, health, magic, might, protection, the last hit dealt and taken, and the skill levels.
+- The equipment doll holds every slot the hero has. Worn things are on the left, weapons, shield and rings on the right.
+- Click a slot to pick a fitting item from the inventory, or to take the worn item off. With an item in hand, clicking a slot swaps it in. You can also drag items from the inventory onto a slot.
+- Equip best from inventory puts on the best weapon and armour you carry.
+- A hero with four arms, like Baccata, has a four-armed figure: the second pair of hands holds a second weapon and shield in the slots on the left.
+
+## Quick spells and spell power
+img: spells
+keys: spell cast power level slider quick spell magic heal spark
+The Spells panel shows every spell the party knows as an icon. The four pips under an icon are its power: bright gold for the power it will be cast at, dim gold for powers the selected hero can afford, dark for powers out of reach. Hover an icon to see its name and cost. (In the plain interface the spells are a list with a number for the power.)
+- The panel holds five spells for the selected hero. Choose them on the character screen: tick the box in front of a spell to put it in that hero's panel, untick it to take it off. A spell learnt later joins the panel while there is room.
+- Right-click a spell to choose its power: a picker opens with the cost of each power. Click or drag to pick.
+- Click the spell to cast it with the selected hero.
+- On the character screen each hero can choose their own quick spell. Pressing C (or Cast) lets the heroes cast their quick spells in turn.
+- If a hero has too little magic for the chosen power, the spell is cast at the highest power they can pay for, and your choice is kept for later.
+- Drag a spell onto the hotbar to cast it with a number key.
+- Heal at low power asks whom to heal: the party cards glow, click one or press Shift and a number.
+
+## Reading a fight
+keys: combat fight monster health bar wind-up attack damage numbers weakness danger warning
+Fights show more than the original did.
+- Every visible monster has a health bar. Hover it for the numbers.
+- An orange bar under a monster fills while it winds up its next attack and flashes red when it strikes.
+- Damage numbers float over monsters and party cards. Hits and misses are written to the log.
+- Once a kind of monster is in the bestiary, small icons next to its health bar show what it is weak to (green) and what heals it (purple).
+- A warning appears when a monster far stronger than the party comes close. A checkpoint save is written at that moment.
+
+## Attacking with the mouse
+keys: attack click mouse cursor sword monster reach melee
+Click a monster in the 3D view to attack it with the selected hero, the same as pressing F.
+- The pointer turns into a sword over a monster close enough to hit: one standing on the block right in front of the party.
+- A monster further away says it is out of reach. Step up to it first.
+- Townsfolk and guards standing at their posts are not attacked by a click: clicking them works as it always did.
+- With an item in your hand, a click throws or uses it as in the original game.
+
+## The cursors
+keys: cursor pointer gauntlet sword hand grab pick up
+The mouse pointer shows what a click will do:
+- A gauntlet: the normal pointer.
+- A pointing gauntlet: something you can click, such as a button.
+- A sword: a monster in reach. A click attacks it.
+- An open gauntlet: you are over the floor where items lie. A click picks one up.
+- The item itself: you are holding something.
+
+## Marching order
+keys: order marching rotate swap formation front back
+The heroes at the front take the hits.
+- Press O, or the Order button, to send the first hero to the back.
+- Drag one party card onto another to swap the two heroes.
+
+## The spell book
+keys: spell book spells magic mana mp cost damage power learn scroll drain thorns viper backstab
+The Journal has a Spell book tab. It lists only the spells your party has learnt, so it never spoils what is still to be found.
+Click a spell to read its page:
+- What it does at each of the four powers, and the mana each power costs.
+- Which of your heroes can cast it, and up to which power, from their mana.
+- How it aims: the block ahead, the first monster in a line, the whole party, and whether armour or walls matter.
+- Where it is learnt.
+What Open Lands changes about spells:
+- Each hero can have a quick spell of their own (see Quick spells and spell power).
+- A hero short of mana casts at the highest power they can pay for, instead of failing.
+- Spells can be put on the hotbar and cast with the number keys.
+- New spells can be bought from the imp in the camp: Drain, Wall of Thorns, Viper and Backstab. They are marked "new in Open Lands" in the spell book.
+- Vortex, a spell cut from the original game before release, is restored and sold by the imp too. It damages the block ahead and throws the survivors back down the passage.
+
+= Items
+
+## Hotbar
+img: hotbar
+keys: hotbar quick slots items potions number keys pin
+Ten slots under the party cards hold items and spells for quick use.
+- Drag an item from the inventory onto a slot to pin it, or Shift-click it in the inventory. You can also click an empty slot with an item in hand.
+- Press 1 to 0, or right-click a slot, to use it on the selected hero. Left-click takes the item into your hand.
+- Shift-click a slot to clear it. Drag a slot onto another to move it.
+- A pinned potion or other consumable shows how many you carry and moves on to the next one when it runs out.
+
+## Inventory
+img: inventory
+keys: inventory bag search filter sort drop slots size stash
+Press I, or the Items button, to open the inventory.
+- Search by name, show only one kind of item, or sort the bag.
+- Click a slot to take or place the hand item. Right-click a slot to use the item on the selected hero.
+- Drag an item onto a hero's equipment slot to equip it, or onto a portrait to use it.
+- Drop mode turns clicks into drops on the floor. Shift and right-click on a slot drops that item.
+- Press B with an item in hand to put it into the first free slot.
+- The bag holds 96 items by default. Settings, Gameplay, Inventory slots sets 48 (the original), 96 or 144.
+- A bigger bag is shown in pages of 48. Use the page buttons under the bag, or turn the mouse wheel over it.
+- Reagents for brewing are kept in their own pouch at the bottom.
+
+## Loot on the floor
+keys: loot floor take all pick up items ground search chest
+Items lying on your block and on the block ahead are listed under the map. Click one, or Take all, to put them straight into the inventory. When a chest is in front of you a Search button appears.
+
+## Weapon wear
+keys: weapon wear dull worn chipped battered grind sharpen
+An optional rule, off by default (Settings, Gameplay). Weapons dull with use and lose up to half their damage. The item card shows Durability as a percent with a bar, and how much of its damage the weapon still deals (from 100% down to 50%), and a mark appears next to the hero's name. The imp in the camp grinds every blade back to new for crowns.
+
+= Map and exploration
+
+## Minimap and walking by click
+img: minimap
+keys: minimap map walk click travel automap zoom
+The Map panel shows the level around you once the party has found the magic map.
+- Click an explored cell to walk there. The party stops on any key, damage, dialogue or blocked step.
+- The mouse wheel zooms. Right-click opens the full map.
+- Hover a cell to see what lies on it.
+- Small cyan marks are unexplored passages. Explore (or X) walks to the nearest one.
+- Note leaves a note on your block. Notes are listed under the map, click one to walk there.
+
+## Full map, other levels and exits
+img: fullmap
+keys: full map level picker exits the lands travel notes legend
+Press M, click Map, or right-click the minimap to open the full map.
+- Drag to pan, wheel to zoom, click a cell to walk there, right-click to leave a note.
+- The level picker shows any level you have explored.
+- Orange badges mark the ways to other levels, with the level number.
+- The Lands lists every region and level by name, which ones you visited and where you last stood, with a Travel button to go back.
+- Nearest unexplored walks to the closest passage you have not seen.
+
+## Objectives
+img: objectives
+keys: objectives quests follow star pin goals
+The original game kept no quest list. Open Lands names the goals of the story and follows them for you.
+- Active objectives are listed in the Objectives panel. Finished ones move to the Journal, Quests tab.
+- Click the star next to an objective to pin it under the map.
+- A message announces every new and finished objective.
+
+## Compass and lantern
+img: compass
+keys: compass lantern oil light dark refill on off direction
+Both sit in the top corners of the map: the compass on the left, the lantern on the right.
+- The compass turns so the way you face is on top; its red needle points north.
+- The lantern shows the oil left in its glass, and its flame while it burns. The flame gets smaller as the oil runs low.
+- Left-click the lantern to put it out and save oil, or to light it again.
+- Right-click the lantern to refill it from an oil flask in the inventory.
+- Hover the lantern to see the oil left as a number.
+- Both are dimmed until the party has found them.
+(In the plain interface they have a panel of their own with On/off and Refill buttons.)
+
+## Puzzle hints
+keys: hint puzzle switch lever secret door teleporter stuck
+An optional help, off by default (Settings, Gameplay). A Hint button appears under the map. It names the nearest closed door and the nearest switch, plate, secret wall or teleporter to try, marks it on the minimap and walks there. It is a guess from the map, not a reading of the scripts, so it can be wrong.
+
+= Camp
+
+## Making camp and resting
+img: camp
+keys: camp rest sleep heal tent R night hours
+Press R, or the Camp button, to make camp. A camp cannot be pitched while a monster is within three blocks; the button tells you who is too close.
+- The camp panel shows each hero's recovery. Health and magic return with time.
+- Sleep 1h, 4h or 8h passes time at once. The party wakes fully mended and potion effects wear off.
+- A full eight hours can bring the level's monsters back (see Monsters return).
+- Monsters that find the camp cut the night short. Only the hours already slept count.
+- Turn around in the camp to find the tent, the cauldron, the chest, the imp and the travelling circle.
+
+## The cauldron and reagents
+keys: cauldron brew potion craft crafting reagents recipe herbs
+Slain monsters sometimes leave reagents: glowing moss, swamp sap, bone dust and more. They go into a pouch of their own. Turn to the cauldron in the camp and choose Brew to turn them into potions. Each recipe lists what it needs. Crafting can be switched off in Settings, Gameplay.
+
+## The stash chest and loadouts
+img: chest
+keys: chest stash storage store loadout remember wear gear
+The chest in the camp keeps items you do not want to carry. It travels with every camp and with your save.
+- Store items from the pack and take them back at any camp.
+- Loadouts remember one set of gear per hero. Remember saves what the hero wears now, Wear puts that set back on from the pack and the chest.
+
+## The imp trader
+img: imp
+keys: imp trader shop errands upgrades spells reagents sell grind
+The imp sits in every camp. His tabs:
+- Reagents: buy and sell brewing reagents.
+- Spells: learn spells for crowns.
+- He buys: sell him items you do not need. Identical items share one row. Search by name, show only one kind (weapons, armour, usable, other) or sort by name or price. The list stays where you scrolled after a sale.
+- Errands: one job at a time, such as bringing him trophies or thinning out a kind of creature. The current errand is shown under the map and turns green when it is done.
+- Camp: upgrades such as a warm hearth that heals twice as fast, a deeper chest, or a ledger that pays errands better.
+- The pit: a dungeon of generated floors (see The Imp's Pit).
+
+## Companions waiting in the camp
+keys: companion party full lora paulson baccata swap camp imp pod room
+The party holds three heroes. When another companion joins a full party, one who is already with you goes to wait in the camp instead of the newcomer being turned away: Lora first, otherwise the companion who joined last. Your champion never leaves.
+- In any camp, the imp's Camp tab lists who is waiting. Swap with brings them back and the hero you choose waits instead.
+- Lora's pod room on Caves Level 2 stays open until she is freed, even after you have met the Draracle. In the original game it was sealed for good.
+
+## The Imp's Pit
+keys: pit dungeon floors generated endless run objective climb out
+The imp can send the party down into the pit, an endless run of generated floors built from levels you have already walked. Each floor has an objective: clear it, kill its master, find the way down, take the imp's sigil, open the vault and more. The sigils belong to the pit: the imp takes them back when the party leaves it. Finishing it brings the party back and unlocks the next floor. Every floor can be run again for experience, crowns, reagents and loot.
+- The monsters are measured against your party, so the first floor is a fair fight.
+- Climb out under the map always takes you back up. The floor stays unbeaten.
+- Saving works as usual. A run travels with the save.
+
+## The travelling circle
+img: circle
+keys: travelling circle travel teleport destination route exits unvisited
+The travelling circle in the camp takes the party back to any level it has visited. Its board also lists the exits of known levels that still lead somewhere unvisited. Click one to see the chain of levels that leads there.
+
+= Journal
+
+## Journal log and search
+img: journallog
+keys: journal log search dialogue messages history conversations filter
+Press J to open the journal. The Log tab keeps every line of dialogue and every notice, grouped by level and conversation, with the speaker's face. Type in the search box to find a line. Clear log empties it.
+Over the message log under the scene, the All, Talk, Combat and System tabs filter what is shown.
+
+## Bestiary and hunting
+img: bestiary
+keys: bestiary monsters creatures hunt stats resistances drops weakness
+Every monster you meet is added to the bestiary with its hit points, might, hit chance, evade, armour, danger, resistances, the levels where it lives and what it leaves behind. Search by name, family or drop.
+Hunt this tracks a creature under the map, with what it leaves and the errand or recipe its kills count towards.
+
+## Items, people, statistics and achievements
+keys: items database people npc statistics achievements share card trophies
+- Items: every item you have seen, with its stats, who can wear it, where it was first found and what it is for.
+- People: everyone you have talked to, with a portrait, where they are and their last line. Walk there takes you to them on the current level.
+- Statistics: time played, monsters slain, damage dealt and taken. Save a share card makes a picture of your run.
+- Achievements: 36 of them, each with its own icon. A message pops up when you earn one.
+
+= Trade
+
+## Shops and the trade window
+keys: shop trade merchant buy sell price crowns wares
+Facing a merchant shows a Trade button over the scene (or press T). The trade window lists the merchant's wares on the left and your inventory on the right, with what the merchant offers for each of your items. Mark items and choose Sell marked to sell them. A price shows a card with the item's stats, who can wear it and how it compares with what the selected hero has. The party's crowns are shown in the Actions panel.
+
+= Saves
+
+## Saving and loading
+img: menu
+keys: save load quick save checkpoint autosave slots export import backup
+Press Esc, or the Menu button, for the saved games.
+- Quick save with F5 and quick load with F9.
+- Eight slots of your own. Each slot shows a picture of the scene.
+- Auto is saved when you leave the game, and optionally every few minutes and on every level change (Settings, Gameplay).
+- CP1 to CP3 are checkpoints, written on every level change and when a dangerous monster comes near.
+- Export saves writes every slot, the hotbar, journal, notes and settings to one file. Import saves reads it back on another computer.
+- After a defeat, the death screen offers to load the last checkpoint or the last save.
+
+= Settings
+
+## Settings overview
+img: settings
+keys: settings options graphics sound gameplay controls accessibility advanced
+Open Settings from the Actions panel, from the menu, or from the title screen before a game starts. The settings are split into tabs:
+- Graphics: display filter, full screen, textured world, HD assets, fantasy interface, smooth scrolling, minimap and the FPS counter.
+- Sound: dialogue as speech, text or both, sound effects and music.
+- Gameplay: difficulty, autosave, inventory size, puzzle hints, monsters return, wounded monsters flee, weapon wear and crafting.
+- Controls: every key can be changed. Reset keys brings back the defaults.
+- Accessibility: larger interface text and colour-blind friendly bars.
+- Advanced: the randomizer, New game+ and repair tools for old saves.
+
+## Remapping keys
+img: keys
+keys: keys remap bindings controls change key
+Open Settings, Controls. Click the key next to an action and press the new key. Reset keys brings back the defaults. Movement stays on the arrows, WASD and Q E.
+
+## Monsters return and wounded monsters flee
+keys: respawn monsters return flee wounded difficulty
+- Monsters return: never on their own, after sleeping eight hours in camp, when you walk back into a level, or both (the default). The level's own monsters come back as on your first visit. This is what makes the imp's kill errands possible.
+- Wounded monsters flee: a monster under a quarter of its health runs away and comes back once healed. A beaten pack falls back together.
+- Difficulty: Easy, Normal or Hard.
+
+## Randomizer and New game+
+keys: randomizer new game plus seed shuffle replay harder
+Both are in Settings, Advanced and apply to new games.
+- The randomizer shuffles the floor items and the kinds of monsters on every level. The same seed always gives the same game.
+- New game+ makes monsters tougher: up to 250% hit points and 175% damage.
+
+## Textured world
+keys: textured world textures hd walls floors materials graphics photo
+Settings, Graphics, Textured world gives every level's walls, floors, ceilings, doors, chests, buttons and decorations the surface of real materials: stone grain, wood fibre, bark and leaves. The original pictures stay underneath, so every place looks as you know it, only finer. Creatures and people keep their original look.
+- The first time you turn it on, it is built from your own game files. That takes a few minutes; a line in the corner shows the progress, and you can keep playing. Each level switches over as soon as it is ready.
+- It is made from your own copy of the game with free photo materials (CC0, Poly Haven), so nothing of the original game is shipped with Open Lands.
+- Turning it off while it builds stops the build. It carries on the next time you turn it on.
+- The display filter does not apply to the 3D view while it is on.
+
+## Display filter, fantasy interface and screenshots
+keys: filter graphics crt smooth xbr fantasy interface theme screenshot photo F12 fps
+- Display filter: the original pixels, smoothed edges, soft blending, a CRT look, or a mix.
+- Fantasy interface: the game screen of Open Lands, carved stone and gold with pixel fonts. The 3D view is as large as the window allows, the party sits along the bottom, the map (with the compass and the lantern in its corners), actions, spells, log and objectives are on the right. The whole screen scales with the window. Switch it off for the plain web-style interface.
+- Show FPS counter: frames per second in the top left corner.
+- F12 saves the scene as a large picture in your Downloads folder.
+- The game pauses while the menu, journal, map or a character screen is open.

@@ -1,0 +1,734 @@
+/* The in-game interface (Settings > "Fantasy interface", the root's theme-fantasy class), over page-fantasy.uss:
+   carved stone frames with gold trim, stone buttons and slots, a stone wall behind everything (Assets/Resources/UI/hud,
+   tools/gen_hud_art.py, from the CC0 Dungeon Crawl tiles). The boxes' places are Host/Web.Hud.cs's (hud-box);
+   the pixel fonts are CssLayout.HostFonts, set in HostMain. Every picture is pixel art drawn at 2x: tiled, never
+   stretched. */
+
+.theme-fantasy {
+  background-color: #0c0a08;
+  background-image: resource("UI/hud/wall");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+  color: #e2d2a6;
+}
+
+/* ---- the screen ---- */
+.theme-fantasy .shell {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  padding: 0;
+}
+.theme-fantasy .masthead {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 6px;
+  height: 58px;
+  padding: 0 24px;
+  flex-direction: row;
+  align-items: center;
+  background-image: resource("UI/hud/frame-thin");
+  -unity-slice-left: 10;
+  -unity-slice-top: 10;
+  -unity-slice-right: 10;
+  -unity-slice-bottom: 10;
+  -unity-slice-type: tiled;
+}
+.theme-fantasy .play {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 66px;
+  bottom: 0;
+  margin: 0;
+}
+.theme-fantasy .sidebar,
+.theme-fantasy .game-ui {
+  display: none;
+}
+.theme-fantasy.hud-title .masthead {
+  display: none;
+}
+.theme-fantasy.hud-title .play {
+  top: 0;
+}
+.theme-fantasy .hud-box {
+  margin: 0;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* the title and where the party is */
+.theme-fantasy .masthead .tag-h1 {
+  font-size: 30px;
+  color: #f0cc6e;
+  margin: 0 18px 0 0;
+  -unity-text-outline-width: 0;
+}
+.theme-fantasy .masthead .status {
+  margin-left: auto;
+  background-image: none;
+  border-width: 0;
+  padding: 0;
+  font-size: 15px;
+  color: #e8cf8a;
+}
+
+/* ---- frames ---- */
+.theme-fantasy .panel,
+.theme-fantasy .ui-messages,
+.theme-fantasy .ui-hotbar,
+.theme-fantasy .modal-box,
+.theme-fantasy .inventory-overlay,
+.theme-fantasy .camp-sheet {
+  border-width: 0;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/hud/frame");
+  -unity-slice-left: 16;
+  -unity-slice-top: 16;
+  -unity-slice-right: 16;
+  -unity-slice-bottom: 16;
+  -unity-slice-type: tiled;
+  padding: 24px;
+}
+.theme-fantasy .ui-hotbar {
+  padding: 10px 14px;   /* the squares' own rims give the rest: Web.Hud.cs sizes the bar to them */
+}
+.theme-fantasy .stage-column.hud-box {
+  padding: 12px;
+  background-image: resource("UI/hud/frame-open");
+  -unity-slice-left: 16;
+  -unity-slice-top: 16;
+  -unity-slice-right: 16;
+  -unity-slice-bottom: 16;
+  -unity-slice-type: tiled;
+}
+.theme-fantasy .stage {
+  border-width: 0;
+}
+.theme-fantasy .ui-card {
+  border-width: 0;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/hud/frame-thin");
+  -unity-slice-left: 10;
+  -unity-slice-top: 10;
+  -unity-slice-right: 10;
+  -unity-slice-bottom: 10;
+  -unity-slice-type: tiled;
+  padding: 16px;
+  flex-grow: 1;
+  flex-basis: 0;
+  margin: 0;
+}
+.theme-fantasy .ui-card.selected {
+  -unity-background-image-tint-color: #ffe9b0;
+}
+.theme-fantasy .ui-party.hud-box {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+/* headings: gold pixel capitals (the page writes them in upper case: the blackletter is for names and the title) */
+.theme-fantasy .panel .tag-h2,
+.theme-fantasy .modal-head .tag-h2,
+.theme-fantasy .inventory-head .tag-h2 {
+  font-size: 16px;
+  color: #f0cc6e;
+  margin: 0 0 8px;
+  letter-spacing: 1px;
+}
+
+/* ---- buttons: stone slabs ---- */
+.theme-fantasy .tag-button,
+.theme-fantasy .ui-quick,
+.theme-fantasy .ui-log-filter,
+.theme-fantasy .game-button,
+.theme-fantasy .ibtn {
+  border-width: 0;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/hud/button-normal");
+  -unity-slice-left: 6;
+  -unity-slice-top: 6;
+  -unity-slice-right: 6;
+  -unity-slice-bottom: 6;
+  -unity-slice-type: tiled;
+  color: #f4e6c0;
+}
+.theme-fantasy .tag-button:hover,
+.theme-fantasy .ui-quick:hover,
+.theme-fantasy .ui-log-filter:hover,
+.theme-fantasy .game-button:hover,
+.theme-fantasy .ibtn:hover {
+  background-image: resource("UI/hud/button-hover");
+  color: #fff4d6;
+}
+.theme-fantasy .tag-button:active,
+.theme-fantasy .ibtn:active,
+.theme-fantasy .ui-log-filter.on,
+.theme-fantasy .tab.active {
+  background-image: resource("UI/hud/button-down");
+  color: #f0cc6e;
+}
+.theme-fantasy .tag-button:disabled {
+  color: #8f8670;
+}
+
+/* ---- slots: hollows in the stone ---- */
+.theme-fantasy .ui-slot,
+.theme-fantasy .inventory-grid .tag-button,
+.theme-fantasy .ui-equip,
+.theme-fantasy .itemdb-tile,
+.theme-fantasy .char-slot {
+  border-width: 0;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/hud/slot");
+  -unity-slice-left: 8;
+  -unity-slice-top: 8;
+  -unity-slice-right: 8;
+  -unity-slice-bottom: 8;
+  -unity-slice-type: tiled;
+}
+.theme-fantasy .ui-slot:hover,
+.theme-fantasy .inventory-grid .tag-button:hover,
+.theme-fantasy .itemdb-tile:hover,
+.theme-fantasy .char-slot:hover {
+  -unity-background-image-tint-color: #ffe2a0;
+}
+
+/* the title screen's big buttons */
+.theme-fantasy .game-button {
+  font-size: 28px;
+  min-height: 52px;
+  padding: 6px 28px;
+  color: #f6d98a;
+}
+
+/* the lists inside the boxes take the room left and scroll in it */
+.theme-fantasy .hud-box .spellbar,
+.theme-fantasy .hud-box .quest-list,
+.theme-fantasy .hud-box .ui-log {
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+/* the errand and the pit's note keep their height; the objectives above them scroll */
+.theme-fantasy .hud-quests .errand-note,
+.theme-fantasy .hud-quests .dungeon-note,
+.theme-fantasy .hud-quests .dungeon-out,
+.theme-fantasy .hud-quests > .panel-note,
+.theme-fantasy .hud-quests > .tag-h2 {
+  flex-shrink: 0;
+}
+.theme-fantasy .hud-box.panel {
+  flex-direction: column;
+}
+.theme-fantasy .hud-box.toolbar {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+}
+
+/* Menu, Journal, Settings, Screen, Debug: a row of buttons inside Actions, where the walking arrows were */
+.theme-fantasy .panel.hud-tools {
+  background-image: none;
+  padding: 0;
+  margin: 8px 0 0;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+.theme-fantasy .hud-tools .ibtn {
+  flex-grow: 1;
+  flex-basis: 0;
+  margin: 0 2px;
+  height: 46px;
+}
+
+/* ---- spells: icon squares, four pips for the power; right-click opens the power picker under them ---- */
+.theme-fantasy .spellbar.spell-icons {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+.theme-fantasy .spell-icons .spell {
+  width: 54px;
+  height: 54px;
+  margin: 0 6px 6px 0;
+  padding: 0;
+  border-width: 0;
+  background-image: none;
+  background-color: rgba(0, 0, 0, 0);
+}
+.theme-fantasy .spell-icons .spell .spell-cast {
+  width: 54px;
+  height: 54px;
+  padding: 0 0 6px;
+  margin: 0;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-image: resource("UI/hud/slot");
+  -unity-slice-left: 8;
+  -unity-slice-top: 8;
+  -unity-slice-right: 8;
+  -unity-slice-bottom: 8;
+  -unity-slice-type: tiled;
+}
+.theme-fantasy .spell-icons .spell .spell-cast:hover {
+  -unity-background-image-tint-color: #ffe2a0;
+}
+.theme-fantasy .spell-icons .spell.selected .spell-cast {
+  background-image: resource("UI/hud/button-hover");
+  -unity-slice-left: 6;
+  -unity-slice-top: 6;
+  -unity-slice-right: 6;
+  -unity-slice-bottom: 6;
+}
+.theme-fantasy .spell-icons .spell .spell-cast:disabled {
+  opacity: 0.45;
+}
+.theme-fantasy .spell-icons .spell-name {
+  display: none;
+}
+.theme-fantasy .spell-icons .spell-power.spell-pips {
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 7px;
+  height: 4px;
+  min-width: 0;
+  flex-direction: row;
+  padding: 0;
+  margin: 0;
+  border-width: 0;
+  background-image: none;
+  background-color: rgba(0, 0, 0, 0);
+}
+.theme-fantasy .spell-pips .pip {
+  flex-grow: 1;
+  height: 4px;
+  margin: 0 1px;
+  background-color: #1e1810;
+}
+.theme-fantasy .spell-pips .pip.can {
+  background-color: #6e5528;
+}
+.theme-fantasy .spell-pips .pip.on {
+  background-color: #ffd66b;
+}
+.theme-fantasy .spell-pop {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 18px;
+  bottom: 18px;
+  justify-content: center;
+  margin: 0;
+  padding: 14px 16px;
+  flex-direction: column;
+  background-image: resource("UI/hud/frame-thin");
+  -unity-slice-left: 10;
+  -unity-slice-top: 10;
+  -unity-slice-right: 10;
+  -unity-slice-bottom: 10;
+  -unity-slice-type: tiled;
+}
+.theme-fantasy .spell-pop-name {
+  font-size: 12px;
+  color: #f0cc6e;
+  margin-bottom: 4px;
+}
+
+/* objectives: long titles wrap under themselves, beside the star */
+.theme-fantasy .hud-box .quest-list .tag-li {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+.theme-fantasy .hud-box .quest-list .tag-li > .tag-span {
+  flex-shrink: 1;
+  flex-grow: 1;
+  min-width: 0;
+  white-space: normal;
+}
+.theme-fantasy .hud-box .quest-pin {
+  flex-shrink: 0;
+}
+
+/* the inventory: over the 3D view, inside its frame (Web.Hud.cs places it) */
+.theme-fantasy .inventory-overlay.hud-inv {
+  translate: 0 0;
+}
+
+/* the map: the picture gives up height so its buttons always stay inside the frame (it is clipped evenly top and
+   bottom: the party stays in the middle; the map can be dragged and zoomed) */
+.theme-fantasy .hud-box .minimap-wrap {
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-height: 0;
+  overflow: hidden;
+  justify-content: center;
+}
+.theme-fantasy .hud-box .minimap {
+  flex-shrink: 0;
+}
+.theme-fantasy .hud-box .map-tools {
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+}
+.theme-fantasy .hud-box .map-tools .ibtn {
+  flex-grow: 1;
+  flex-basis: 0;
+  min-width: 0;
+}
+
+/* dialogue answers, Continue and Skip: one size of stone button, large enough to read */
+.theme-fantasy .ui-choice {
+  min-width: 140px;
+  height: 38px;
+  padding: 0 18px;
+  margin: 6px 8px 0 0;
+  font-size: 16px;
+  -unity-text-align: middle-center;
+  border-width: 0;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/hud/button-normal");
+  -unity-slice-left: 6;
+  -unity-slice-top: 6;
+  -unity-slice-right: 6;
+  -unity-slice-bottom: 6;
+  -unity-slice-type: tiled;
+  color: #f4e6c0;
+}
+.theme-fantasy .ui-choice:hover {
+  background-image: resource("UI/hud/button-hover");
+  color: #fff4d6;
+}
+
+/* the log's tabs */
+.theme-fantasy .ui-log-filters {
+  margin-bottom: 8px;
+}
+.theme-fantasy .ui-log-filter {
+  min-width: 80px;
+  height: 30px;
+  padding: 0 14px;
+  margin-right: 6px;
+  font-size: 15px;
+  -unity-text-align: middle-center;
+  color: #e2d2a6;
+}
+.theme-fantasy .ui-log-filter.on {
+  color: #f0cc6e;
+}
+
+/* the compass and the lantern in the map's top corners (pixel art at 2x, Web.Hud.cs draws their state) */
+.theme-fantasy .minimap-wrap .hud-rose {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  width: 64px;
+  height: 64px;
+}
+.theme-fantasy .minimap-wrap .hud-lamp {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  width: 40px;
+  height: 50px;
+}
+
+/* the character screen: "in the Spells panel" toggles */
+.theme-fantasy .spell-show {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  padding: 0;
+  margin-right: 6px;
+  font-size: 16px;
+  -unity-text-align: middle-center;
+  color: #ffd66b;
+  background-image: resource("UI/hud/slot");
+  -unity-slice-left: 8;
+  -unity-slice-top: 8;
+  -unity-slice-right: 8;
+  -unity-slice-bottom: 8;
+  -unity-slice-type: tiled;
+}
+
+/* the character screen's spell rows: [in panel] [icon] name ........ power */
+.theme-fantasy .char-spell {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+.theme-fantasy .char-spell .spell-pick {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  margin: 0 8px 0 0;
+  justify-content: center;
+  align-items: center;
+  background-image: resource("UI/hud/slot");
+  -unity-slice-left: 8;
+  -unity-slice-top: 8;
+  -unity-slice-right: 8;
+  -unity-slice-bottom: 8;
+  -unity-slice-type: tiled;
+}
+.theme-fantasy .char-spell .spell-pick:hover {
+  -unity-background-image-tint-color: #ffe2a0;
+}
+.theme-fantasy .char-spell .spell-name {
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-width: 0;
+}
+.theme-fantasy .char-spell .spell-slider {
+  width: 120px;
+  height: 30px;
+  flex-shrink: 0;
+}
+
+/* crowns: a gold coin before the sum (the pack, the trade window) */
+.theme-fantasy .credits,
+.theme-fantasy .trade-credits {
+  padding-left: 30px;
+  min-height: 24px;
+  -unity-text-align: middle-left;
+  background-image: resource("UI/hud/coin");
+  background-size: 24px 24px;
+  background-position-x: left 0;
+  background-position-y: center;
+  background-repeat: no-repeat;
+  color: #f0cc6e;
+}
+
+.theme-fantasy .spell-pop .spell-slider {
+  height: 34px;
+  max-height: 34px;
+}
+
+/* the paperdoll's slots: room inside the stone rim for the item's name */
+.theme-fantasy .char-slot {
+  width: 72px;
+  padding: 7px 8px 8px;
+}
+.theme-fantasy .char-slot-name {
+  max-width: 54px;
+  -unity-text-align: middle-center;
+}
+
+/* the page's bare buttons stay bare (the camp's pictures, the hit areas over the game picture...) */
+.theme-fantasy .quest-pin, .theme-fantasy .quest-pin:hover,
+.theme-fantasy .hit-area, .theme-fantasy .hit-area:hover,
+.theme-fantasy .camp-spot, .theme-fantasy .camp-spot:hover,
+.theme-fantasy .camp-station-art, .theme-fantasy .camp-station-art:hover,
+.theme-fantasy .character-button, .theme-fantasy .character-button:hover,
+.theme-fantasy .spell .star, .theme-fantasy .spell .star:hover {
+  background-image: none;
+}
+
+/* fields and dropdowns: hollows in the stone */
+.theme-fantasy .input-type-text,
+.theme-fantasy .input-type-search,
+.theme-fantasy .input-type-number,
+.theme-fantasy .tag-select {
+  border-width: 0;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/hud/slot");
+  -unity-slice-left: 8;
+  -unity-slice-top: 8;
+  -unity-slice-right: 8;
+  -unity-slice-bottom: 8;
+  -unity-slice-type: tiled;
+  padding: 4px 8px;
+  min-height: 30px;
+  color: #f0dca4;
+}
+
+/* the camp's lists: each row a thin stone frame */
+.theme-fantasy .imp-row,
+.theme-fantasy .craft-row,
+.theme-fantasy .stash-row,
+.theme-fantasy .trade-row {
+  border-width: 0;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/hud/frame-thin");
+  -unity-slice-left: 10;
+  -unity-slice-top: 10;
+  -unity-slice-right: 10;
+  -unity-slice-bottom: 10;
+  -unity-slice-type: tiled;
+  padding: 10px 14px;
+  margin-bottom: 4px;
+  min-height: 56px;
+  flex-shrink: 0;
+}
+.theme-fantasy .imp-do,
+.theme-fantasy .craft-do {
+  min-width: 70px;
+  height: 30px;
+  font-size: 14px;
+}
+
+/* the camp's panel (rest, sleep, leave) */
+.theme-fantasy .camp-hud {
+  border-width: 0;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/hud/frame");
+  -unity-slice-left: 16;
+  -unity-slice-top: 16;
+  -unity-slice-right: 16;
+  -unity-slice-bottom: 16;
+  -unity-slice-type: tiled;
+  padding: 20px 22px;
+}
+
+/* the imp's errand, under the objectives */
+.theme-fantasy .hud-quests .errand-note {
+  margin: 8px 0 0;
+  padding: 8px 0 0 14px;
+  border-top-width: 1px;
+  border-top-color: #4a3d24;
+  white-space: normal;
+}
+
+/* in the pit: the floor's goal and the way out instead of the story's objectives and the errand */
+.theme-fantasy .hud-quests .dungeon-note {
+  white-space: normal;
+  margin: 0 0 10px;
+  color: #d7b6ff;
+}
+.theme-fantasy .hud-quests .dungeon-out {
+  height: 40px;
+  margin: 0 0 6px;
+}
+.theme-fantasy .hud-quests.in-pit .quest-list,
+.theme-fantasy .hud-quests.in-pit .errand-note,
+.theme-fantasy .hud-quests.in-pit > .panel-note {
+  display: none;
+}
+.theme-fantasy .hud-quests.in-pit .dungeon-note {
+  display: flex;
+}
+.theme-fantasy .hud-box .quest-pin {
+  font-size: 13px;
+  width: 18px;
+}
+
+/* ---- the spell book: stone slabs for the spells, a stone page, the power table sunk into it ---- */
+.theme-fantasy .sb-item {
+  border-width: 0;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/hud/button-normal");
+  -unity-slice-left: 6;
+  -unity-slice-top: 6;
+  -unity-slice-right: 6;
+  -unity-slice-bottom: 6;
+  -unity-slice-type: tiled;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  min-height: 42px;
+}
+.theme-fantasy .sb-item:hover {
+  background-image: resource("UI/hud/button-hover");
+}
+.theme-fantasy .sb-item.on {
+  background-image: resource("UI/hud/button-down");
+}
+.theme-fantasy .sb-item-name {
+  font-size: 16px;
+  color: #f4e6c0;
+}
+.theme-fantasy .sb-item.on .sb-item-name {
+  color: #f0cc6e;
+}
+.theme-fantasy .sb-page {
+  border-width: 0;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/hud/frame-thin");
+  -unity-slice-left: 10;
+  -unity-slice-top: 10;
+  -unity-slice-right: 10;
+  -unity-slice-bottom: 10;
+  -unity-slice-type: tiled;
+  padding: 20px 24px;
+}
+.theme-fantasy .sb-title {
+  font-size: 30px;
+  color: #f0cc6e;
+}
+.theme-fantasy .sb-school {
+  color: #b8a77e;
+  font-size: 13px;
+}
+.theme-fantasy .sb-sub {
+  font-size: 14px;
+  color: #f0cc6e;
+  margin: 18px 0 8px;
+}
+.theme-fantasy .sb-table {
+  border-width: 0;
+  background-image: resource("UI/hud/slot");
+  -unity-slice-left: 8;
+  -unity-slice-top: 8;
+  -unity-slice-right: 8;
+  -unity-slice-bottom: 8;
+  -unity-slice-type: tiled;
+  padding: 6px;
+}
+.theme-fantasy .sb-row {
+  padding: 6px 10px;
+  border-bottom-color: rgba(138, 106, 44, .35);
+}
+.theme-fantasy .sb-hrow {
+  background-color: rgba(0, 0, 0, 0);
+  border-bottom-color: #8a6a2c;
+}
+.theme-fantasy .sb-hrow > * {
+  color: #f0cc6e;
+  font-size: 13px;
+}
+
+/* every button in its "on" state (a chosen tab, filter, chip, page, mode): the pressed stone slab, gold letters -
+   the page's own rules for these states drew the old gold-cornered frame */
+.theme-fantasy .tag-button.on,
+.theme-fantasy .tag-button.active,
+.theme-fantasy .tag-button.selected,
+.theme-fantasy .tab.active,
+.theme-fantasy .jl-chip.on,
+.theme-fantasy .imp-tab.on,
+.theme-fantasy .inv-page.on,
+.theme-fantasy .itemdb-chip.on,
+.theme-fantasy .ui-log-filter.on,
+.theme-fantasy #inventory-drop-mode.on,
+.theme-fantasy .level-pick .tag-button.selected,
+.theme-fantasy .char-spell .tag-button.selected {
+  border-width: 0;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: resource("UI/hud/button-down");
+  -unity-slice-left: 6;
+  -unity-slice-top: 6;
+  -unity-slice-right: 6;
+  -unity-slice-bottom: 6;
+  -unity-slice-type: tiled;
+  color: #f0cc6e;
+}
+.theme-fantasy .jl-chip,
+.theme-fantasy .itemdb-chip,
+.theme-fantasy .inv-page,
+.theme-fantasy .imp-tab {
+  border-width: 0;
+}

@@ -1,0 +1,41 @@
+Open Lands - credits for the art and fonts made by others
+=========================================================
+
+Everything below is used under the licence named with it. CC0 works are public domain; CC-BY works need the credit
+given here. Changes made for Open Lands: pictures were cropped, scaled to pixel size, recoloured or combined.
+
+- Frames, buttons and slots (UI/*.png made by tools/gen_ui_art.py): "Fantasy UI Borders" by Kenney (kenney.nl),
+  CC0 1.0 (public domain).
+- World map landmarks and decorations (UI/worldmap.png made by tools/gen_world_map.py): icons from
+  game-icons.net by Lorc and Delapouite, CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/).
+  Used: castle, village, huts-village, cave-entrance, swamp, mine-wagon, stone-tower, pine-tree, wyvern, sailboat.
+- In-game interface (UI/hud/*.png made by tools/gen_hud_art.py: stone frames, buttons, slots, the wall): built from
+  "Dungeon Crawl 32x32 tiles" (Dungeon Crawl Stone Soup artists, https://opengameart.org/content/dungeon-crawl-32x32-tiles),
+  CC0 1.0 (public domain).
+- Pixel fonts: Jacquard 12 (Fonts/Jacquard12-Regular.ttf) by The Soft Type Project Authors, and Pixelify Sans
+  (Fonts/PixelifySans.ttf) by The Pixelify Sans Project Authors, both SIL Open Font License 1.1
+  (Fonts/OFL-Jacquard12.txt, Fonts/OFL-PixelifySans.txt).
+- Heading font (Fonts/Cinzel-Bold.ttf): Cinzel by The Cinzel Project Authors, SIL Open Font License 1.1
+  (Fonts/OFL.txt).
+- Textured world materials (StreamingAssets/materials): photo textures from Poly Haven (polyhaven.com), CC0 1.0.
+- Coin (UI/hud/coin.png): "496 pixel art icons for medieval/fantasy RPG" by Henrique Lazarini (7Soul1), CC0 1.0.
+- Cursors (Cursors/game-*.png, made by tools/gen_hud_art.py): the arrows and the crosshair drawn for Open Lands; the
+  sword from "496 pixel art icons for medieval/fantasy RPG" by Henrique Lazarini (7Soul1), CC0 1.0; the gauntlet from
+  "Dungeon Crawl 32x32 tiles" (Dungeon Crawl Stone Soup artists), CC0 1.0.
+- Camp station pictures: see StreamingAssets/camp/CREDITS.txt (CC0 and CC-BY 4.0 art from OpenGameArt and Poly Haven).
+- Reagent icons (Reagents/*.png), all CC0 via OpenGameArt: "496 pixel art icons for medieval/fantasy RPG" by Henrique
+  Lazarini (7Soul1); "Dungeon Crawl 32x32 tiles" (Dungeon Crawl Stone Soup artists); "Idylwild's Inventory" by Idylwild.
+
+- Camp station pictures (made by tools/gen_camp_scenes.py; room walls and floors from Poly Haven materials, CC0)
+
+- Travelling circle: "Animated Portal or Wormhole" by Hansjoerg Malthaner (Varkalandar),
+  https://opengameart.org/content/animated-portal-or-wormhole-several-variants , CC-BY 4.0
+- Cauldron: "cauldrons" by Kiririnochka, https://opengameart.org/content/cauldrons , CC0
+- Stash chest: "Treasure Chest" by Rico Cilliers, Poly Haven, https://polyhaven.com/a/treasure_chest , CC0
+- Imp trader: "[LPC] Imp 2" by Stephen "Redshrike" Challener, commissioned by William.Thompsonj,
+  https://opengameart.org/content/lpc-imp-2 , CC-BY 4.0
+
+- Textured world: Open Lands ships only the CC0 photo materials (Poly Haven, polyhaven.com). The textured
+  pictures themselves are built on your computer from your own copy of the game and are never shipped.
+
+Fonts: the SIL Open Font License 1.1 applies to Cinzel, Jacquard 12 and Pixelify Sans.

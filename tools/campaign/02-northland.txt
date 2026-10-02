@@ -1,0 +1,17 @@
+# Northland Forest: Scotia on the road, the marina takes the writ, the boat to the Southland.
+walk:360
+wait:3
+next:4
+hold:244
+game:250:40
+wait:3
+next:6
+wait:4
+expect:say:Timid fool! I will not forget you
+expect:say:I have a Writ from the King
+expect:say:hurry and get on the boat
+expect:flag:25
+expect:level:3
+log
+save
+shot:02-end
