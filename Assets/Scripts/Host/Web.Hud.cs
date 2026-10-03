@@ -269,7 +269,10 @@ namespace LolHost
                 return;
             }
             float playH = H - TOP;
-            float partyH = Mathf.Clamp(playH * 0.22f, 170, 214);
+            // a lone hero's card is as wide as the bar, so its Attack / Equip best / quick spell row wraps under
+            // the bars and stats: the strip is given the height that wrapped row needs (a full party's cards are
+            // narrow enough to keep the buttons beside the stats, and stay well under this)
+            float partyH = Mathf.Clamp(playH * 0.26f, 170, 260);
             const float SLOT = 76;               // a hotbar square (the page's grid makes ten of them, square)
             float barH = SLOT + 20;
             // the view: as big as fits beside a right column of at least 420px
