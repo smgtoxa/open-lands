@@ -1,5 +1,7 @@
 // The browser's file handling on Windows: <input type="file"> is the system "Open" dialog (comdlg32), and a
 // download lands in the user's Downloads folder, as Chrome saves it without asking.
+// On macOS there is no comdlg32: the same two dialogs come from the system chooser through osascript, which
+// every Mac has, so the player needs no native plugin. Other platforms keep returning null as before.
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -60,6 +62,11 @@ namespace LolHost
                 return GetOpenFileNameW(ref ofn) ? Marshal.PtrToStringUni(buffer) : null;
             }
             finally { Marshal.FreeHGlobal(buffer); }
+#elif UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+            // "*.json" is the pattern the page gives; AppleScript wants the bare extension
+            string ext = (pattern ?? "").TrimStart('*', '.');
+            string ofType = ext.Length == 0 ? "" : $" of type {{\"{Quoted(ext)}\"}}";
+            return Osa($"POSIX path of (choose file with prompt \"{Quoted(title)}\"{ofType})");
 #else
             return null;
 #endif
@@ -101,10 +108,48 @@ namespace LolHost
                 finally { CoTaskMemFree(pidl); }
             }
             finally { Marshal.FreeHGlobal(name); Marshal.FreeHGlobal(path); }
+#elif UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+            return Osa($"POSIX path of (choose folder with prompt \"{Quoted(title)}\")");
 #else
             return null;
 #endif
         }
+
+#if UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
+        /// <summary>A string as AppleScript spells it, inside its quotes.</summary>
+        static string Quoted(string text) => (text ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+        /// <summary>osascript's answer; null when the user cancelled (it leaves with 1) or it could not run.
+        /// The script goes through a file, so no quoting of ours has to survive the command line.</summary>
+        static string Osa(string script)
+        {
+            string file = Path.Combine(Path.GetTempPath(), "open-lands-chooser.applescript");
+            try
+            {
+                File.WriteAllText(file, script);
+                var start = new System.Diagnostics.ProcessStartInfo("/usr/bin/osascript", $"\"{file}\"")
+                {
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                };
+                using (var osa = System.Diagnostics.Process.Start(start))
+                {
+                    string chosen = osa.StandardOutput.ReadToEnd();
+                    osa.StandardError.ReadToEnd();
+                    osa.WaitForExit();
+                    if (osa.ExitCode != 0) return null;
+                    chosen = chosen.Trim();
+                    if (chosen.Length == 0) return null;
+                    // a folder comes back with a trailing slash; the rest of the host expects a plain path
+                    return chosen.Length > 1 && chosen.EndsWith("/") ? chosen.Substring(0, chosen.Length - 1) : chosen;
+                }
+            }
+            catch (Exception) { return null; }
+            finally { try { File.Delete(file); } catch (Exception) { /* a leftover in temp is harmless */ } }
+        }
+#endif
 
         /// <summary>The user's Downloads folder (where a browser saves a download).</summary>
         public static string Downloads()
