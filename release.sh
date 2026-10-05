@@ -4,10 +4,10 @@
 #   bash release.sh [OUT_DIR]
 set -eu
 cd "$(dirname "$0")"
-LANDS="${LANDS:-$HOME/lands}"   # the web project
+LANDS="${LANDS:-$HOME/lands}"   # the web project (optional: refreshes the icons kept in the repository)
 OUT="${1:-${OUT:-$HOME/OpenLands-release}}"
 bash build-engine.sh
-mkdir -p Assets/StreamingAssets/web/src && cp -ru "$LANDS"/src/assets Assets/StreamingAssets/web/src/
+[ -d "$LANDS/src/assets" ] && mkdir -p Assets/StreamingAssets/web/src && cp -ru "$LANDS"/src/assets Assets/StreamingAssets/web/src/
 UNITY="/mnt/c/Program Files/Unity/Hub/Editor/6000.6.3f1/Editor/Unity.exe"
 proj="$(wslpath -w "$PWD")"
 rm -rf Build/Release
@@ -26,8 +26,8 @@ for plat in Windows Linux; do
   find "$data/StreamingAssets" -name "*.meta" -delete
   rm -rf "$d"/*_BurstDebugInformation_DoNotShip "$d"/*_BackUpThisFolder_ButDontShipItInYourBuild
   cp release/README.txt release/CREDITS.txt "$d"/
-  cp "$LANDS"/COPYING "$d"/LICENSE.txt
-  cp "$LANDS"/NOTICE "$d"/NOTICE.txt
+  cp LICENSE "$d"/LICENSE.txt
+  cp NOTICE "$d"/NOTICE.txt
   mkdir -p "$d"/licenses && cp Assets/Resources/Fonts/OFL*.txt "$d"/licenses/
 done
 mkdir -p "$OUT"
