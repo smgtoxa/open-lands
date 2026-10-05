@@ -15,6 +15,7 @@ Linux (64-bit)
   cd OpenLands
   chmod +x OpenLands.x86_64
   ./OpenLands.x86_64
+  Choosing the game folder needs zenity or kdialog (most desktops have one).
 
 macOS (Apple Silicon and Intel)
   Unzip OpenLands-macOS.zip and move OpenLands.app into your Applications folder.

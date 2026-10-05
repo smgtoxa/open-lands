@@ -42,7 +42,11 @@ namespace LolHost
             pick.On("click", async () =>
             {
                 string folder = FileDialog.PickFolder("Select the GOG Lands of Lore folder (contains GAME.DAT)");
-                if (folder == null) return;
+                if (folder == null)
+                {
+                    if (FileDialog.Missing != null) { status.SetClassName("err"); status.SetText(FileDialog.Missing); }
+                    return;
+                }
                 pick.SetDisabled(true);
                 bar.SetHidden(false);
                 status.SetClassName("");

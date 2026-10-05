@@ -2,6 +2,10 @@
 
 ## 0.2
 
+### New platforms
+- macOS build (Apple Silicon and Intel).
+- Choosing the game folder and importing saves now work on Linux (through zenity or kdialog) and on macOS.
+
 ### The Imp's Pit, reworked
 - The pit no longer ends after one floor. Take the stairs down as deep as you like, and climb out whenever you want.
 - Every floor is a full maze with a puzzle to solve before its gate opens: pull levers, find a hidden switch, carry
@@ -34,3 +38,4 @@
 - The pit's gate message no longer appears twice.
 - Pit floors with many items no longer fail to fill.
 - Errand monster lists are kept in saves.
+- A party of one hero shows its Attack, Equip best and quick spell buttons again.

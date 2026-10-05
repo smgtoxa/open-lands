@@ -1,7 +1,7 @@
 // The browser's file handling on Windows: <input type="file"> is the system "Open" dialog (comdlg32), and a
 // download lands in the user's Downloads folder, as Chrome saves it without asking.
 // On macOS there is no comdlg32: the same two dialogs come from the system chooser through osascript, which
-// every Mac has, so the player needs no native plugin. Other platforms keep returning null as before.
+// every Mac has, so the player needs no native plugin. On Linux zenity or kdialog asks (Chooser).
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -69,6 +69,10 @@ namespace LolHost
             if (picked != null) return picked.Length == 0 ? null : picked;
             string ofType = ext.Length == 0 ? "" : $" of type {{\"{Quoted(ext)}\"}}";
             return Osa($"POSIX path of (choose file with prompt \"{Quoted(title)}\"{ofType})");
+#elif UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            return Chooser(new[] { "--file-selection", $"--title={title}", $"--file-filter={filterName} | {pattern}", "--file-filter=All files | *" },
+                new[] { "--title", title, "--getopenfilename", home, pattern });
 #else
             return null;
 #endif
@@ -114,6 +118,9 @@ namespace LolHost
             string picked = Panel(title, true, null);
             if (picked != null) return picked.Length == 0 ? null : picked;
             return Osa($"POSIX path of (choose folder with prompt \"{Quoted(title)}\")");
+#elif UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            return Chooser(new[] { "--file-selection", "--directory", $"--title={title}" }, new[] { "--title", title, "--getexistingdirectory", home });
 #else
             return null;
 #endif
@@ -219,6 +226,48 @@ namespace LolHost
             finally { try { File.Delete(file); } catch (Exception) { /* a leftover in temp is harmless */ } }
         }
 #endif
+
+#if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
+        /// <summary>Linux has no system dialog the player can call: zenity (GNOME and most desktops) or kdialog (KDE,
+        /// Steam Deck) asks instead. The path; null when cancelled, or when neither is installed (then Missing says so).</summary>
+        static string Chooser(string[] zenity, string[] kdialog)
+        {
+            Missing = null;
+            bool ran = false;
+            foreach (var (exe, args) in new[] { ("zenity", zenity), ("kdialog", kdialog) })
+            {
+                try
+                {
+                    var start = new System.Diagnostics.ProcessStartInfo(exe, string.Join(" ", Array.ConvertAll(args, Arg)))
+                    {
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
+                    };
+                    using (var tool = System.Diagnostics.Process.Start(start))
+                    {
+                        ran = true;
+                        var err = tool.StandardError.ReadToEndAsync();
+                        string chosen = tool.StandardOutput.ReadToEnd().Trim();
+                        tool.WaitForExit();
+                        // 127: a wrapper found no binary; anything else non-zero is a cancel
+                        if (tool.ExitCode == 127) { ran = false; continue; }
+                        return tool.ExitCode == 0 && chosen.Length > 0 ? chosen : null;
+                    }
+                }
+                catch (Exception) { /* not installed: try the next one */ }
+            }
+            if (!ran) Missing = "No file chooser found: install zenity (or kdialog) and try again.";
+            return null;
+        }
+
+        /// <summary>One argument, quoted as the process start splits a command line.</summary>
+        static string Arg(string a) => "\"" + (a ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+#endif
+
+        /// <summary>Why the last Open / PickFolder gave nothing when it was not a cancel (no chooser on this system); else null.</summary>
+        public static string Missing;
 
         /// <summary>The user's Downloads folder (where a browser saves a download).</summary>
         public static string Downloads()

@@ -285,7 +285,7 @@ namespace LolHost
         async Task savesFileChange()
         {
             string file = FileDialog.Open("Import saves", "Saves (*.json)", "*.json");
-            if (file == null) return;
+            if (file == null) { if (FileDialog.Missing != null) toast(FileDialog.Missing); return; }
             try
             {
                 string text = File.ReadAllText(file);
