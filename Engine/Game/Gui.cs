@@ -1270,6 +1270,7 @@ namespace Lol
             int block = calcNewBlockPosition(currentBlock, currentDirection);
             int dir = currentDirection ^ 2;
             int type = specialWallTypes[levelBlockProperties[block].walls[dir]];
+            if (uiInDungeon() && type != 5 && uiDungeonWallClick(block, dir)) return 1;   // a sliding stone, the hidden switch
             switch (type)
             {
                 case 1:
@@ -1294,11 +1295,7 @@ namespace Lol
                 }
                 case 4: return await clickedWallOnlyScript(block);
                 case 5:
-                    if (uiInDungeon() && uiDungeonDoorLocked(block))
-                    {
-                        ui?.Invoke("message", new object[] { "The door will not move. Something else has to give first.", "system" });
-                        return 1;
-                    }
+                    if (uiInDungeon() && uiDungeonDoorLocked(block)) return 1;   // it says why itself (or turns the key)
                     return await clickedDoorSwitch(block, dir);
                 case 6: return await clickedNiche(block, dir);
                 default: return 0;

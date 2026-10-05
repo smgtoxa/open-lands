@@ -20,6 +20,7 @@ namespace LolHost
             ["core"] = "src/assets/errand-core.svg",
             ["fang"] = "src/assets/errand-fang.svg",
             ["sigil"] = "src/assets/pit-sigil.svg",
+            ["perfectheal"] = "src/assets/potion-heal.svg",
         };
 
         // { ...item, art: ART[item.id] }

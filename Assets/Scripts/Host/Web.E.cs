@@ -1187,6 +1187,7 @@ namespace LolHost
                     case "npc": npcStarted(Arg(args, 0)); break;
                     case "target": { bool on = (bool)Arg(args, 0); gameUi.targetMode(on); if (on) toast("Cast on whom? Click a hero", ""); break; }
                     case "camp": openCampSheet((string)Arg(args, 0)); break;
+                    case "pit": if ((string)Arg(args, 0) == "stairs") pitStairs(); break;
                 }
             };
             if (gameUiRoot != null) gameUiRoot.SetHidden(false);

@@ -600,7 +600,9 @@ namespace Lol
                 }
                 int sx = (m.x + (sbyte)@static.MonsterShiftOffsets[m.shiftStep << 1]) & 0xffff;
                 int sy = (m.y + (sbyte)@static.MonsterShiftOffsets[(m.shiftStep << 1) + 1]) & 0xffff;
+                drawBoost = m.dungeonBoss != 0 ? 384 : 0;
                 var brightnessOverlay = drawItemOrMonster(shp, monsterPalette, sx, sy, 0, 0, flg | 1, -1, flip);
+                drawBoost = 0;
                 // Screen box of the sprite for the host interface (damage numbers, health bars).
                 m.drawW = LolShapes.scaledSize(shp.width, dmScaleW);
                 m.drawH = LolShapes.scaledSize(shp.height, dmScaleH);

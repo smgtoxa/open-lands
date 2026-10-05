@@ -732,3 +732,16 @@
 .theme-fantasy .imp-tab {
   border-width: 0;
 }
+
+/* the pit's master: named over its health bar */
+.mon-master {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -18px;
+  -unity-text-align: middle-center;
+  font-size: 13px;
+  color: #ffd66b;
+  -unity-text-outline-width: 1px;
+  -unity-text-outline-color: #000000;
+}

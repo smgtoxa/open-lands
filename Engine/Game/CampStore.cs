@@ -36,6 +36,8 @@ namespace Lol
     public sealed class ImpJob
     {
         public string kind, family, item, name;
+        /// <summary>Unity build: the kinds of that family the party can find now (named in the errand)</summary>
+        public string kinds;
         public int need;
         public double chance;
         public string hint;
@@ -108,7 +110,9 @@ namespace Lol
 
         public static readonly ExtraItemDef[] DUNGEON_ITEMS =
         {
-            new ExtraItemDef { id = "sigil", name = "Pit Sigil", icon = 224, kind = "errand", price = 0, use = "The imp's mark. On a pit floor that asks for it, carrying it (or enough of them) finishes the floor. Worth nothing outside the pit." },
+            new ExtraItemDef { id = "sigil", name = "Pit Sigil", icon = 224, kind = "errand", price = 0, use = "The imp's mark. On a pit floor that asks for them, holding enough opens the gate to the way down. Worth nothing outside the pit." },
+            new ExtraItemDef { id = "pitkey", name = "Gate Key", icon = 171, kind = "errand", price = 0, use = "Opens the locked gate of the pit floor it was found on: hold it and click the gate. Worth nothing outside the pit." },
+            new ExtraItemDef { id = "perfectheal", name = "Perfect Healing Potion", icon = 217, art = "src/assets/potion-heal.svg", kind = "errand", price = 0, use = "A quest item: it can save a life that no herb could. Keep it for someone who needs it." },
         };
 
         public static ExtraItemDef errandItemFor(string familyId)
@@ -345,23 +349,44 @@ namespace Lol
         // ---- the imp's errands ----
         // He always has exactly one going: fetch him trophies, or thin out a kind of creature. The kill
         // count is measured against a snapshot taken when the job was accepted, so old kills do not pay.
+        /// <summary>Unity build: the kinds the party has fought (the host's bestiary), for an errand taken where no
+        /// monster lives.</summary>
+        public List<string> errandNearby;
+
+        /// <summary>A monster kind's name: its sprite file (ORC.SHP -> Orc), as monsterName gives it.</summary>
+        public string uiKindName(int type)
+        {
+            var p = type >= 0 && type < monsterProperties.Count() ? monsterProperties[type] : null;
+            if (p == null || p.hitPoints == 0) return "";
+            string file = monsterShapeNames != null ? monsterShapeNames.ElementAtOrDefault(p.shapeIndex) : "";
+            if (string.IsNullOrEmpty(file)) return "";
+            string b = System.Text.RegularExpressions.Regex.Replace(System.Text.RegularExpressions.Regex.Replace(file, @"\.SHP$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase), @"\d+$", "").ToLowerInvariant();
+            return b.Length == 0 ? "" : char.ToUpperInvariant(b[0]) + b.Substring(1);
+        }
+
         public ImpJob uiMakeJob(Func<double> random = null)
         {
             random = random ?? (() => _entropy.NextDouble());   // Math.random
             var killsByFamily = uiCraftKillsByFamily();
             int done = store.job != null ? store.job.done : 0;
             int size = 3 + Js.FloorDiv(done, 2);   // he asks for a little more each time
-            var family = FAMILIES[Js.Floor(random() * FAMILIES.Length)];
+            // Unity build: only creatures the party can find now - this level's own, else the kinds it has already
+            // fought (errandNearby, from the host's bestiary) - never a family that lives at the far end of the game
+            var nearby = levelMonsterTypes.Select(t => uiKindName(t)).Where(nm => !string.IsNullOrEmpty(nm)).Distinct().ToList();
+            if (nearby.Count == 0 && errandNearby != null) nearby = errandNearby.Distinct().ToList();
+            var families = nearby.Select(nm => familyOf(nm)).Distinct().ToList();
+            var family = families.Count != 0 ? families[Js.Floor(random() * families.Count)] : FAMILIES[Js.Floor(random() * FAMILIES.Length)];
+            string kinds = string.Join(", ", nearby.Where(nm => familyOf(nm).id == family.id).Take(3));
             var trophy = errandItemFor(family.id) ?? errandItemFor("common");
             if (random() < 0.7)
             {
                 int ti = Math.Min(TIERS.Length - 1, Js.Floor(random() * (1 + Js.FloorDiv(done, 2))));
                 var tier = (ti >= 0 && ti < TIERS.Length ? TIERS[ti] : null) ?? TIERS[0];
                 int needC = size + 2;
-                return new ImpJob { kind = "collect", family = family.id, item = trophy.id, name = trophy.name, need = needC, chance = tier.chance, hint = tier.label, pay = needC * tier.pay, done = done };
+                return new ImpJob { kind = "collect", family = family.id, kinds = kinds, item = trophy.id, name = trophy.name, need = needC, chance = tier.chance, hint = tier.label, pay = needC * tier.pay, done = done };
             }
             int need = size;
-            return new ImpJob { kind = "hunt", family = family.id, need = need, from = killsByFamily.TryGetValue(family.id, out int k) ? k : 0, pay = need * 25, done = done };
+            return new ImpJob { kind = "hunt", family = family.id, kinds = kinds, need = need, from = killsByFamily.TryGetValue(family.id, out int k) ? k : 0, pay = need * 25, done = done };
         }
 
         // `job = this.store.job` defaults: a null argument means "the current errand".
@@ -370,7 +395,7 @@ namespace Lol
             job = job ?? store.job;
             if (job == null || string.IsNullOrEmpty(job.kind)) return "";
             var family = FAMILIES.FirstOrDefault(f => f.id == job.family);
-            string who = family != null ? family.name : job.family;
+            string who = (family != null ? family.name : job.family) + (!string.IsNullOrEmpty(job.kinds) ? $" ({job.kinds})" : "");
             if (job.kind == "collect") return $"Bring the imp {job.need} × {job.name} from {who}.";
             if (job.kind == "fetch") return $"Bring the imp {job.need} × {REAGENTS[job.key].name.ToLowerInvariant()}.";   // an errand from an older save
             return $"Kill {job.need} of {who}.";

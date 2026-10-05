@@ -64,6 +64,13 @@ namespace LolHost
         // the errand as the JS object literal has it (camp-store.mjs): only its kind's fields, in that order
         static JsonObject JobJson(ImpJob job)
         {
+            var o = JobFields(job);
+            if (!string.IsNullOrEmpty(job.kinds)) o["kinds"] = job.kinds;   // Unity build: the kinds the errand names
+            return o;
+        }
+
+        static JsonObject JobFields(ImpJob job)
+        {
             switch (job.kind)
             {
                 case "collect": return new JsonObject { ["kind"] = job.kind, ["family"] = job.family, ["item"] = job.item, ["name"] = job.name, ["need"] = job.need, ["chance"] = job.chance, ["hint"] = job.hint, ["pay"] = job.pay, ["done"] = job.done };
@@ -156,8 +163,12 @@ namespace LolHost
             return engine != null ? engine.uiJobPay(job) : 0;
         }
 
-        public static ImpJob acceptJob(LandsOfLore engine)
+        public static ImpJob acceptJob(LandsOfLore engine) => acceptJob(engine, null);
+
+        // `fought`: the kinds the party has killed (the bestiary), asked for only where this level keeps no monsters
+        public static ImpJob acceptJob(LandsOfLore engine, IEnumerable<string> fought)
         {
+            engine.errandNearby = fought?.ToList();
             var job = engine.uiAcceptJob();
             writeJob(engine);
             return job;

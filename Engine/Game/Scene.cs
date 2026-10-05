@@ -642,6 +642,7 @@ namespace Lol
                 }
             }
             updateAutoMap(currentBlock);
+            if (dungeon != null) await uiDungeonStepped(currentBlock);   // the pit's traps and its way down
         }
 
         // ---- doors (KyraRpgEngine) ----
@@ -1280,6 +1281,14 @@ namespace Lol
             }
             else ovl2 = screen.levelOverlays[4];
             int r = calcDrawingLayerParameters(x, y, shape, vflip);
+            if (drawBoost > 0 && dmScaleH > 0)
+            {
+                // the pit's master, drawn larger: the same ground under its feet, taller above it
+                int ground = shpDmY + (LolShapes.scaledSize(shape.height, dmScaleH) >> 1);
+                dmScaleW = Math.Min(0x200, (dmScaleW * drawBoost) >> 8);
+                dmScaleH = Math.Min(0x200, (dmScaleH * drawBoost) >> 8);
+                shpDmY = ground - (LolShapes.scaledSize(shape.height, dmScaleH) >> 1);
+            }
             if (tblValue == -1)
             {
                 r = 7 - (r / 3 - 1); // Math.trunc(r / 3)
@@ -1313,6 +1322,9 @@ namespace Lol
             shpDmY -= dH;
             return brightnessOverlay;
         }
+
+        /// <summary>Unity build: a scale (256 = as is) for the next sprite drawn: the pit's master, larger.</summary>
+        public int drawBoost;
 
         public int calcDrawingLayerParameters(int x1, int y1, Shape shape, bool vflip)
         {

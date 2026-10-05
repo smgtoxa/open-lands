@@ -42,6 +42,8 @@ namespace Lol
         // set by monsters.mjs (drawing, fleeing, attack pacing) and by the pit / NG+ (dungeon.mjs, mods.mjs)
         public int fleeing, drawW, drawH, drawX, drawY, drawSerial, attackWait, ngplus, dungeonBoss;
         public double pitScale;
+        /// <summary>Unity build: a pit monster's full health as the floor sized it (its kind's own hit points do not apply)</summary>
+        public int pitMaxHp;
 
         /// <summary>{ ...m }: every field, shallow (equipmentShapes shared, as the spread shares it).</summary>
         public Monster Spread() => (Monster)MemberwiseClone();

@@ -70,7 +70,7 @@ namespace LolHost
             // (the log, the guide, tooltips) keeps the readable font
             foreach (var sel in new[] { ".tag-h1", ".ui-name", ".guide-title", ".sb-title", ".card-name", ".game-button" })
                 CssLayout.HostFonts.Add((".theme-fantasy " + sel, new[] { "res:Fonts/Jacquard12-Regular", "Georgia" }));
-            foreach (var sel in new[] { ".panel .tag-h2", ".modal-head .tag-h2", ".inventory-head .tag-h2", ".modal-box .tag-h3", ".st-title", ".sb-sub", ".sb-hrow > *", ".sb-item-name", ".sb-school", ".tag-button", ".ibtn", ".tab", ".ui-log-filter", ".ui-choice", ".status", ".ui-quick", ".ui-key", ".ui-count" })
+            foreach (var sel in new[] { ".panel .tag-h2", ".modal-head .tag-h2", ".inventory-head .tag-h2", ".modal-box .tag-h3", ".st-title", ".sb-sub", ".sb-hrow > *", ".sb-item-name", ".sb-school", ".tag-button", ".ibtn", ".tab", ".ui-log-filter", ".ui-choice", ".status", ".ui-quick", ".ui-key", ".ui-count", ".mon-master" })
                 CssLayout.HostFonts.Add((".theme-fantasy " + sel, new[] { "res:Fonts/PixelifySans", "Segoe UI" }));
             // the world map's names are lettered in Cinzel in either interface
             CssLayout.HostFonts.Add((".wm-name", new[] { "res:Fonts/Cinzel-Bold", "Georgia" }));

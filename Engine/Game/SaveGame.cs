@@ -36,7 +36,7 @@ namespace Lol
         // Keys other modules add to a monster object as they go (monsters.mjs drawing and pacing, the pit,
         // NG+). JSON.stringify writes them whenever the object has them - a level borrowed by a pit floor
         // keeps its pitScale in the save - so they round-trip here: written when set, read when present.
-        static readonly string[] SaveGame_MONSTER_EXTRA_KEYS = { "fleeing", "drawW", "drawH", "drawX", "drawY", "drawSerial", "attackWait", "ngplus", "dungeonBoss", "pitScale" };
+        static readonly string[] SaveGame_MONSTER_EXTRA_KEYS = { "fleeing", "drawW", "drawH", "drawX", "drawY", "drawSerial", "attackWait", "ngplus", "dungeonBoss", "pitScale", "pitMaxHp" };
         static readonly string[] SaveGame_ITEM_KEYS = { "nextAssignedObject", "nextDrawObject", "flyingHeight", "block", "x", "y", "level", "itemPropertyIndex", "shpCurFrame_flg" };
         static readonly string[] SaveGame_FLYING_KEYS = { "enable", "objectType", "attackerId", "item", "x", "y", "flyingHeight", "direction", "distance", "field_D", "c", "flags", "wallFlags" };
 

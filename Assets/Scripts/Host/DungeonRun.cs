@@ -26,6 +26,8 @@ namespace LolHost
         public bool bossAlive;
         public int kills, sigilsBefore, levers, leversPulled;
         public bool vaultOpen;
+        public bool gateOpen, gateLocked, floorDone;
+        public int stairs, secrets, secretsFound;
         // added by the page
         public int sigils;
         public string vaultWhere, exitWhere, leverWhere;
@@ -35,6 +37,7 @@ namespace LolHost
             depth = d.depth; level = d.level; objective = d.objective; need = d.need; exitBlock = d.exitBlock; ready = d.ready;
             monstersLeft = d.monstersLeft; bossAlive = d.bossAlive; kills = d.kills; sigilsBefore = d.sigilsBefore;
             levers = d.levers; leversPulled = d.leversPulled; vaultOpen = d.vaultOpen;
+            gateOpen = d.gateOpen; gateLocked = d.gateLocked; floorDone = d.floorDone; stairs = d.stairs; secrets = d.secrets; secretsFound = d.secretsFound;
         }
     }
 
@@ -54,10 +57,19 @@ namespace LolHost
         public static string floorSizeName(int depth) => LandsOfLore.floorSizeName(depth);
         public static int monsterCount(int depth) => LandsOfLore.monsterCount(depth);
 
+        // the line under the objectives: what is left to do, then (the gate open) which way the stairs lie
+        static string Way(PitInfo i, string pending) =>
+            i.floorDone ? $"beaten · the stairs lie {i.exitWhere}" : i.gateOpen ? $"the gate is open · the way down lies {i.exitWhere}" : pending;
+        static string Hidden(PitInfo i) => i.secrets > 0 ? $" · {i.secretsFound}/{i.secrets} hidden passages found" : "";
+
         static readonly Dictionary<string, Func<PitInfo, int, string>> NOTES = new Dictionary<string, Func<PitInfo, int, string>>
         {
-            ["clear"] = (i, need) => $"{i.monstersLeft} left",
-            ["boss"] = (i, need) => (i.bossAlive ? "it still walks" : "it is dead"),
+            ["levers"] = (i, need) => Way(i, $"{i.leversPulled}/{i.levers} levers pulled") + Hidden(i),
+            ["switch"] = (i, need) => Way(i, "a loose stone works the gate") + Hidden(i),
+            ["key"] = (i, need) => Way(i, "the gate is locked: find its key") + Hidden(i),
+            ["sigils"] = (i, need) => Way(i, $"{Math.Max(0, i.sigils - i.sigilsBefore)}/{need} sigils") + Hidden(i),
+            ["clear"] = (i, need) => i.gateOpen || i.floorDone ? Way(i, "") : $"{i.monstersLeft} left",
+            ["boss"] = (i, need) => i.floorDone ? Way(i, "") : i.bossAlive ? "the master still walks" + Hidden(i) : $"the master is dead · the way down lies {i.exitWhere}",
             ["exit"] = (i, need) => (!string.IsNullOrEmpty(i.exitWhere) ? $"it lies {i.exitWhere}" : "somewhere in the dead ends"),
             ["sigil"] = (i, need) => $"{Math.Max(0, i.sigils - i.sigilsBefore)}/{need}",
             ["shards"] = (i, need) => $"{Math.Max(0, i.sigils - i.sigilsBefore)}/{need}",

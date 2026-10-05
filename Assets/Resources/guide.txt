@@ -222,21 +222,35 @@ The imp sits in every camp. His tabs:
 - Reagents: buy and sell brewing reagents.
 - Spells: learn spells for crowns.
 - He buys: sell him items you do not need. Identical items share one row. Search by name, show only one kind (weapons, armour, usable, other) or sort by name or price. The list stays where you scrolled after a sale.
-- Errands: one job at a time, such as bringing him trophies or thinning out a kind of creature. The current errand is shown under the map and turns green when it is done.
+- Errands: one job at a time, such as bringing him trophies or thinning out a kind of creature. He only asks for creatures that live where you are now (or, where nothing lives, ones you have already fought), and names them, for example "Kill 3 of wandering beasts (Orc, Boar)". The current errand is shown in the Objectives box and turns green when it is done.
 - Camp: upgrades such as a warm hearth that heals twice as fast, a deeper chest, or a ledger that pays errands better.
 - The pit: a dungeon of generated floors (see The Imp's Pit).
 
 ## Companions waiting in the camp
 keys: companion party full lora paulson baccata swap camp imp pod room
-The party holds three heroes. When another companion joins a full party, one who is already with you goes to wait in the camp instead of the newcomer being turned away: Lora first, otherwise the companion who joined last. Your champion never leaves.
+The party holds three heroes. When another companion joins a full party, the newcomer is not turned away: you choose who travels with you, the newcomer or one of the companions waiting in the camp (for example Timothy, Paulson or Lora). The others wait in the camp. Your champion and Baccata never leave.
 - In any camp, the imp's Camp tab lists who is waiting. Swap with brings them back and the hero you choose waits instead.
 - Lora's pod room on Caves Level 2 stays open until she is freed, even after you have met the Draracle. In the original game it was sealed for good.
 
+## Saving Timothy
+keys: timothy perfect healing potion dying northland forest scout rescue join master floor five
+In the original game Timothy, the scout from the Grey Eagle, is found dying in the Northland Forest after you meet the Draracle, and nothing can be done. In Open Lands he can be saved.
+- The master of floor 5 of the imp's pit drops a Perfect Healing Potion. It drops once; if you lose it before Timothy is saved, the next master of floor 5 drops another.
+- Carry it when you find Timothy. When the party asks "Shouldn't we assist him somehow?", choose Give him the Perfect Healing Potion.
+- Saved, Timothy joins the party, his skills raised to match the rest of your party. If the party is full, you choose who travels with you, and the imp can swap them later.
+- You have one chance: without the potion when the scene plays, Timothy dies as in the original.
+
 ## The Imp's Pit
-keys: pit dungeon floors generated endless run objective climb out
-The imp can send the party down into the pit, an endless run of generated floors built from levels you have already walked. Each floor has an objective: clear it, kill its master, find the way down, take the imp's sigil, open the vault and more. The sigils belong to the pit: the imp takes them back when the party leaves it. Finishing it brings the party back and unlocks the next floor. Every floor can be run again for experience, crowns, reagents and loot.
-- The monsters are measured against your party, so the first floor is a fair fight.
-- Climb out under the map always takes you back up. The floor stays unbeaten.
+keys: pit dungeon floors generated endless run objective climb out gate lever switch key sigil master boss hidden passage secret trap stairs deeper
+The imp can send the party down into the pit: generated floors built from levels you have already walked, as deep as you dare to go.
+- Every floor is cut in two by a gate. The stairs down lie beyond it, and the gate opens only when you solve the floor: pull all its levers, find its hidden switch (try the dead ends), find its key and use it on the gate, gather the imp's sigils, or kill everything on the floor.
+- Every fifth floor belongs to a master: a far bigger and tougher version of the floor's strongest creature, waiting by the stairs. At half its strength it flies into a rage and calls its guards. You cannot take the stairs while it lives.
+- Some walls are not what they seem. A wall with an odd decoration may be a stone that slides away when you click it, into a hidden alcove with potions, a lever, the key or a sigil. Deeper down, not every such stone is marked.
+- From floor 6, some floors throw the party to another corridor when stepped on. From floor 10, some turn it about.
+- Reach the stairs with the gate open and the floor is beaten: the imp pays at once, crowns, experience, reagents and potions. Then go down to the next floor, or stay.
+- Each floor is harder than the one before, and there is no bottom. The monsters are measured against your party: the first floor is a fair fight; by floor ten every hit hurts and every creature takes many blows.
+- Climb out in the Objectives box takes you home whenever you like. Every floor you beat on the way down is already paid.
+- The sigils and gate keys belong to the pit: the imp takes them back when you leave.
 - Saving works as usual. A run travels with the save.
 
 ## The travelling circle

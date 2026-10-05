@@ -201,6 +201,70 @@ namespace LolHost
                 var shown = CssCursor.CursorFor(picked);
                 Debug.Log($"autopilot cursor at {arg}: {(shown is string s ? s : "picture")} over {(picked?.userData is DomData d ? d.tag + "#" + d.id + " ." + string.Join(".", picked.GetClasses()) : picked?.ToString())}");
             }
+            else if (kind == "pit")   // pit - logs where the floor's gate, stairs, puzzle pieces, sliding stones and traps are
+            {
+                var d = Engine()?.dungeon;
+                if (d == null) Debug.Log("autopilot pit: not in the pit");
+                else Debug.Log($"autopilot pit: depth={d.depth} objective={d.objective} start={d.plan?.start} gate={d.gate?.block}/{(d.gate?.open == true ? "open" : "shut")}/door={d.gate?.door} stairs={d.stairs} levers=[{string.Join(" ", d.levers.Select(l => $"{l.block}:{l.dir}"))}] switch={d.switchWall?.block}:{d.switchWall?.dir} secrets=[{string.Join(" ", d.secrets.Select(x => x.block))}] traps=[{string.Join(" ", d.traps.Select(t => $"{t.kind}@{t.block}>{t.to}"))}] spots=[{string.Join(" ", d.spots.Take(6))}] party={Engine().currentBlock}/{Engine().currentDirection} boss={string.Join(" ", Engine().monsters.Where(m => m.dungeonBoss != 0 && m.hitPoints > 0).Select(m => $"{m.block}:{m.hitPoints}/{d.bossMaxHp}:x{m.pitScale:0.00}"))} monsters={Engine().monsters.Count(m => m.properties != null && m.hitPoints > 0 && m.mode < 13)} hp=[{string.Join(" ", Engine().monsters.Where(m => m.properties != null && m.hitPoints > 0 && m.dungeonBoss == 0).Take(4).Select(m => $"{m.hitPoints}x{m.pitScale:0.00}"))}]");
+            }
+            else if (kind == "pitenter")   // pitenter:FLOOR - sends the party down to that floor of the pit
+            {
+                int floor = int.Parse(arg, CultureInfo.InvariantCulture);
+                Dom.Invoke(() => { _ = web.enterDungeon(floor); });
+            }
+            else if (kind == "pithand")   // pithand - takes the pit's gate key from the pack into the hand
+            {
+                Dom.Invoke(() =>
+                {
+                    var e = Engine(); if (e == null) return;
+                    for (int i = 0; i < e.inventory.Length; i += 1)
+                        if (e.inventory[i] != 0 && e.uiExtraItem(e.inventory[i])?.id == "pitkey") { int it = e.inventory[i]; e.inventory[i] = 0; _ = e.setHandItem(it); break; }
+                });
+            }
+            else if (kind == "pitboss")   // pitboss:PERCENT - wounds the floor's master to that share of its strength
+            {
+                int pct = int.Parse(arg, CultureInfo.InvariantCulture);
+                Dom.Invoke(() => { var e = Engine(); var b = e?.monsters.FirstOrDefault(m => m.dungeonBoss != 0 && m.hitPoints > 0); if (b != null && e.dungeon != null) b.hitPoints = Math.Max(1, e.dungeon.bossMaxHp * pct / 100); });
+            }
+            else if (kind == "saveslot")   // saveslot:SLOT:NAME - saves the game into that slot under that name
+            {
+                int c2 = arg.IndexOf(':');
+                string slot = arg.Substring(0, c2), name = arg.Substring(c2 + 1);
+                Dom.Invoke(() =>
+                {
+                    var m = typeof(Web).GetMethod("saveToSlot", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    var ok = m.Invoke(web, new object[] { slot, false, new System.Text.Json.Nodes.JsonObject { ["name"] = name } });
+                    Debug.Log($"autopilot saveslot {slot}: {ok}");
+                });
+            }
+            else if (kind == "loadslot")   // loadslot:SLOT - loads that save slot
+            {
+                Dom.Invoke(() => { var m = typeof(Web).GetMethod("loadFromSlot", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public); m.Invoke(web, new object[] { arg }); });
+            }
+            else if (kind == "join")   // join:ID - a companion joins as Timothy does when saved (who waits is asked)
+            {
+                int id = int.Parse(arg, CultureInfo.InvariantCulture);
+                Dom.Invoke(() => { var e = Engine(); e?.queueAsync(async () => { await e.companionJoins(id); }); });
+            }
+            else if (kind == "flag")   // flag:N:V - sets (V 1) or clears (V 0) game flag N
+            {
+                var p = arg.Split(':').Select(x => int.Parse(x, CultureInfo.InvariantCulture)).ToArray();
+                Dom.Invoke(() => { var e = Engine(); if (e == null) return; if (p[1] != 0) e.setGameFlag(p[0]); else e.resetGameFlag(p[0]); });
+            }
+            else if (kind == "giveitem")   // giveitem:ID - one of the port's own items (heal, perfectheal...) into the bag
+            {
+                Dom.Invoke(() =>
+                {
+                    var e = Engine(); if (e == null) return;
+                    var props = e.uiCraftRegisterItems(ErrandItems.ERRAND_ITEMS.Concat(ErrandItems.DUNGEON_ITEMS).ToArray());
+                    if (props.TryGetValue(arg, out int prop)) e.uiDungeonGiveItem(prop);
+                });
+            }
+            else if (kind == "pitgo")   // pitgo:BLOCK:DIR - moves the party on the floor it stands on (no level load)
+            {
+                var p = arg.Split(':').Select(x => int.Parse(x, CultureInfo.InvariantCulture)).ToArray();
+                Dom.Invoke(() => { var e = Engine(); if (e == null) return; e.currentBlock = p[0]; e.currentDirection = p.Length > 1 ? p[1] : e.currentDirection; (e.partyPosX, e.partyPosY) = e.calcCoordinates(p[0], 0x80, 0x80); e.sceneUpdateRequired = true; e.gui_drawScene(0); e.updateAutoMap(p[0]); });
+            }
             else if (kind == "tp")
             {
                 var p = arg.Split(':').Select(x => int.Parse(x, CultureInfo.InvariantCulture)).ToArray();

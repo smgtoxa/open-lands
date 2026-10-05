@@ -112,6 +112,13 @@ namespace Lol
                 });
             }
             checkSceneUpdateNeed(block);
+            // Unity build: Timothy, saved in his scene, joins once it is over
+            if (timothyRescued && currentLevel == 2 && block == 141)
+            {
+                timothyRescued = false;
+                ui?.Invoke("dialogue", new object[] { "Timothy: The pain... it is gone. I owe you my life. Let me fight beside you, and we will see Scotia pay for this." });
+                await companionJoins(2);
+            }
         }
 
         public Func<EmcState, Task<int>>[] makeOpcodeTable()
@@ -465,9 +472,11 @@ namespace Lol
                     else snd_playSoundEffect(12, -1);
                     return 1;
                 }),
-                ["addRemoveCharacter"] = Sync((s) =>
+                ["addRemoveCharacter"] = async (s) =>
                 {
                     int id = A(s, 0);
+                    // Unity build: a full party asks who waits in the camp (Paulson's arrival, for one)
+                    bool benched = id > 0 && companionsBench && countActiveCharacters() >= 3 && await pickWhoWaits(id) >= 0;
                     if (id < 0)
                     {
                         id = -id;
@@ -480,14 +489,14 @@ namespace Lol
                             break;
                         }
                     }
-                    else addCharacter(id);
+                    else if (addCharacter(id) && benched) await chooseCompanion(id);   // Unity build: who travels with you
                     if (updateFlags == 0)
                     {
                         gui_enableDefaultPlayfieldButtons();
                         gui_drawPlayField();
                     }
                     return 1;
-                }),
+                },
                 ["giveItem"] = Sync((s) =>
                 {
                     int item = makeItem(A(s, 0), A(s, 1), A(s, 2));
@@ -1106,7 +1115,25 @@ namespace Lol
                     return 1;
                 },
                 Sync((tim, p) => { screen.copyRegion(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], true); return 1; }),
-                async (tim, p) => { await playCharacterScriptChat((short)p[0], p[1], 1, getLangString(p[2]) ?? "", null, p, 3); return 1; },
+                async (tim, p) =>
+                {
+                    // Unity build: Timothy dying in the Northland Forest (TIM1, level 2). Saved, Baccata's farewell is skipped.
+                    bool timothyScene = companionsBench && currentLevel == 2 && tim.filename != null && tim.filename.StartsWith("TIM1", StringComparison.OrdinalIgnoreCase);
+                    if (timothyScene && timothyRescued && p[2] == 69) return 1;
+                    await playCharacterScriptChat((short)p[0], p[1], 1, getLangString(p[2]) ?? "", null, p, 3);
+                    // "Shouldn't we assist him somehow?" - with the Perfect Healing Potion, the party can
+                    if (timothyScene && p[2] == 68 && carriesPerfectPotion())
+                    {
+                        setupDialogueButtons(2, "Give him the Perfect Healing Potion", "Leave", null);
+                        if (await runDialogue() == 1)
+                        {
+                            usePerfectPotion();
+                            timothyRescued = true;
+                            ui?.Invoke("message", new object[] { "You hold the flask to Timothy's lips. The arrow wounds close before your eyes.", "note" });
+                        }
+                    }
+                    return 1;
+                },
                 Sync((tim, p) => { gui_drawScene(p[0]); return 1; }),
                 Sync((tim, p) => { update(); return 1; }),
                 Sync((tim, p) =>

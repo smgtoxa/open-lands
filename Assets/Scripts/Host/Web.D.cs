@@ -349,7 +349,7 @@ namespace LolHost
                 if (job == null || string.IsNullOrEmpty(job.kind))
                 {
                     patchList(list, row(null, "No errand", $"He has run {(job != null ? job.done : 0)} for you so far.",
-                        () => { CampStoreUi.acceptJob(engine); impSaid = "The imp scratches out an errand."; impKey = impTab + "|!"; renderImp(true); renderErrand(); }, "Ask him", false));
+                        () => { CampStoreUi.acceptJob(engine, stats.bestiary.Where(kv => kv.Value.kills > 0).Select(kv => kv.Key)); impSaid = "The imp scratches out an errand."; impKey = impTab + "|!"; renderImp(true); renderErrand(); }, "Ask him", false));
                 }
                 else
                 {
@@ -376,7 +376,7 @@ namespace LolHost
                 if (engine.uiInDungeon())
                 {
                     var info = engine.uiDungeonInfo();
-                    patchList(list, row(null, $"Floor {info.depth}", "He can pull you back up. The floor stays unbeaten.",
+                    patchList(list, row(null, $"Floor {info.depth}", info.floorDone ? "He can pull you back up. Everything you earned is yours." : "He can pull you back up. This floor stays unbeaten; the ones before it are paid.",
                         () => abandonDungeon(), "Return", false));
                 }
                 else
@@ -392,7 +392,7 @@ namespace LolHost
                         var bestNode = record.best?[floor.ToString(CultureInfo.InvariantCulture)];
                         var beaten = bestNode != null && double.TryParse(bestNode.ToJsonString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var bestN) ? (int)bestN : 0;
                         rows.Add(row(null, $"Floor {floor}",
-                            $"{LandsOfLore.floorSizeName(plan.depth)} · {def.label.ToLowerInvariant()} · {engine.levelName(plan.level)} stone · {LandsOfLore.monsterCount(plan.depth)} of them{(beaten != 0 ? $" · beaten {beaten}×" : "")}",
+                            $"{LandsOfLore.floorSizeName(plan.depth)} · {def.label.ToLowerInvariant()} · {engine.levelName(plan.level)} stone · {LandsOfLore.monsterCount(plan.depth)} of them{(beaten != 0 ? $" · beaten {beaten}×" : "")} · go as deep as you dare",
                             () => { impSaid = $"Down you go, floor {fl}."; _ = enterDungeon(fl); }, floor > record.cleared ? "Enter" : "Again", false));
                     }
                     patchList(list, rows.Count > 0 ? rows
