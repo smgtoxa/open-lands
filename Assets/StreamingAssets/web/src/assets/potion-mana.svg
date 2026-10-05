@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" shape-rendering="geometricPrecision">
+  <defs>
+    <linearGradient id="l" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#12224f"/>
+      <stop offset="0.55" stop-color="#2f5bc2"/>
+      <stop offset="1" stop-color="#7aa8ff"/>
+    </linearGradient>
+  </defs>
+  <!-- cork -->
+  <rect x="9.5" y="1.5" width="5" height="3" rx="0.8" fill="#8a6a3c" stroke="#3a2c18" stroke-width="0.7"/>
+  <!-- neck -->
+  <path d="M10.3 4.5 h3.4 v2.6 l2.6 3.1 v9.1 a2.6 2.6 0 0 1-2.6 2.6 h-3.4 a2.6 2.6 0 0 1-2.6-2.6 v-9.1 l2.6-3.1 z"
+        fill="#1b2430" stroke="#c9d6e2" stroke-width="0.9" stroke-linejoin="round"/>
+  <!-- liquid -->
+  <path d="M8.1 11.8 h7.8 v7.5 a2.1 2.1 0 0 1-2.1 2.1 h-3.6 a2.1 2.1 0 0 1-2.1-2.1 z" fill="url(#l)"/>
+  <ellipse cx="12" cy="11.8" rx="3.9" ry="0.9" fill="#7aa8ff" opacity="0.85"/>
+  <!-- bubbles and highlight -->
+  <circle cx="10.4" cy="15.2" r="0.7" fill="#7aa8ff" opacity="0.8"/>
+  <circle cx="13.3" cy="17.4" r="0.5" fill="#7aa8ff" opacity="0.65"/>
+  <path d="M9.6 9.6 v9.4" stroke="#ffffff" stroke-width="0.8" stroke-linecap="round" opacity="0.35"/>
+</svg>

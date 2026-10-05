@@ -15,7 +15,8 @@ Builds for Windows and Linux are on the [Releases](https://github.com/smgtoxa/op
 ## Building
 
 - Unity 6000.6.3f1 with Windows and Linux Build Support (Mono), and the .NET SDK for the engine.
-- The web project this port follows (`LANDS`, `~/lands` by default) supplies a few pictures and the test tools.
+- The web project this port follows (`LANDS`, `~/lands` by default) is only needed for the test tools and
+  `release.sh`; a plain `build.sh` works from this repository alone.
 
 ```bash
 bash build.sh        # the engine DLL, then the Windows player in Build/Windows

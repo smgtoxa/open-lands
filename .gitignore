@@ -17,8 +17,11 @@ obj/
 # the engine DLL build-engine.sh makes (its .meta files stay, so Unity's references keep their GUIDs)
 /Assets/Plugins/Lol/*.dll
 /Assets/Plugins/Lol/*.pdb
-# copied from the web project by build.sh
-/Assets/StreamingAssets/web/
+# the web project's camp pictures (build.sh copies them in): their origin is not recorded, so they stay out
+/Assets/StreamingAssets/web/src/assets/camp/
+/Assets/StreamingAssets/web/src/assets/camp.meta
+/Assets/StreamingAssets/web/src/assets/camp.png*
+/Assets/StreamingAssets/web/src/assets/camp-plain.png*
 
 # the original game's data files (copyrighted) and test output
 /GameData/

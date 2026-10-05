@@ -6,7 +6,8 @@ set -eu
 cd "$(dirname "$0")"
 bash build-engine.sh
 # the page's own pictures (camp scene, errand / potion icons), served from StreamingAssets like the web root
-mkdir -p Assets/StreamingAssets/web/src && cp -ru "${LANDS:-$HOME/lands}"/src/assets Assets/StreamingAssets/web/src/
+# (they are in the repository too; the copy only refreshes them when the web project is here)
+L="${LANDS:-$HOME/lands}"; [ -d "$L/src/assets" ] && mkdir -p Assets/StreamingAssets/web/src && cp -ru "$L"/src/assets Assets/StreamingAssets/web/src/
 UNITY="/mnt/c/Program Files/Unity/Hub/Editor/6000.6.3f1/Editor/Unity.exe"
 proj="$(wslpath -w "$PWD")"
 set +e

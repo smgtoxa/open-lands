@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" shape-rendering="geometricPrecision">
+  <defs>
+    <linearGradient id="l" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#5c2c08"/>
+      <stop offset="0.55" stop-color="#d6752a"/>
+      <stop offset="1" stop-color="#ffc074"/>
+    </linearGradient>
+  </defs>
+  <!-- cork -->
+  <rect x="10" y="1.4" width="4" height="2.8" rx="0.8" fill="#8a6a3c" stroke="#3a2c18" stroke-width="0.7"/>
+  <!-- round flask: the enchanted brews have their own shape -->
+  <path d="M10.6 4.2 h2.8 v4.2 a6.6 6.6 0 1 1-2.8 0 z"
+        fill="#1b2430" stroke="#c9d6e2" stroke-width="0.9" stroke-linejoin="round"/>
+  <!-- liquid -->
+  <path d="M6.2 13.4 a6.3 6.3 0 0 0 11.6 0 a9 9 0 0 1-11.6 0 z" fill="url(#l)"/>
+  <circle cx="12" cy="15.2" r="5.1" fill="url(#l)"/>
+  <ellipse cx="12" cy="10.6" rx="5" ry="1" fill="#ffc074" opacity="0.8"/>
+  <!-- sparks and highlight -->
+  <circle cx="10" cy="16.4" r="0.7" fill="#ffc074" opacity="0.85"/>
+  <circle cx="13.6" cy="14.2" r="0.5" fill="#ffc074" opacity="0.7"/>
+  <path d="M8.4 13.4 a4.4 4.4 0 0 0 1.6 4.6" stroke="#ffffff" stroke-width="0.8" fill="none" stroke-linecap="round" opacity="0.35"/>
+</svg>
