@@ -16,9 +16,17 @@ Linux (64-bit)
   chmod +x OpenLands.x86_64
   ./OpenLands.x86_64
 
+macOS (Apple Silicon and Intel)
+  Unzip OpenLands-macOS.zip and move OpenLands.app into your Applications folder.
+  The app is not signed or notarized, so Gatekeeper warns about it the first time. Either right-click (or
+  Control-click) OpenLands.app, choose Open and confirm, or clear the warning once with:
+    xattr -dr com.apple.quarantine /Applications/OpenLands.app
+  Afterwards it starts like any other application.
+
 Saves and settings are kept in:
   Windows: %USERPROFILE%\AppData\LocalLow\open_lands\Open Lands
   Linux:   ~/.config/unity3d/open_lands/Open Lands
+  macOS:   ~/Library/Application Support/com.open-lands.Open-Lands
 
 Licence
   Open Lands is free software under the GNU General Public License, version 3 or later (LICENSE.txt). You may
