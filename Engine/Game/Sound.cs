@@ -513,6 +513,40 @@ namespace Lol
             }
         }
 
+        AudioSource lastVoice;
+
+        /// <summary>Plays a voice file (KING01.VOC...) and ends when it has played; at once when voices are off or the
+        /// file is missing. The character selection's king and hero voices.</summary>
+        public Task snd_voicePlayAsync(string name)
+        {
+            string file = $"{name}.VOC";
+            if (!speechEnabledFlag || !res.exists(file)) return Task.CompletedTask;
+            var done = new TaskCompletionSource<bool>();
+            try
+            {
+                var buffer = vocBuffer(file, res.get(file));
+                var src = playBuffer(buffer, 255);
+                log($"voice {name}: {(src != null ? $"{buffer.duration:0.0}s" : "no audio")}");
+                if (src == null) return Task.CompletedTask;
+                var ended = src.onended;
+                src.onended = () => { ended?.Invoke(); done.TrySetResult(true); };
+                lastVoice = src;
+                _ = speechTimeout(done, buffer.duration * 1000 + 250);
+            }
+            catch (Exception error) { log($"voice {file}: {error.Message}"); return Task.CompletedTask; }
+            return done.Task;
+        }
+
+        /// <summary>Stops the voice snd_voicePlayAsync started (its task ends).</summary>
+        public void snd_stopVoice()
+        {
+            var v = lastVoice;
+            lastVoice = null;
+            if (v == null) return;
+            try { audioHost?.Stop(v.handle); } catch (Exception) { /* already over */ }
+            v.onended?.Invoke();
+        }
+
         // ---- speech ----
         public async Task loadTalkArchive(string name)
         {

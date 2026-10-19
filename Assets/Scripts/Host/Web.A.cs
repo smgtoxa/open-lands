@@ -586,6 +586,7 @@ namespace LolHost
         void showTitle()
         {
             stopAnimation();
+            stopSelectionSound();
             compactActive = false;
             setFrameSize(320, 200);
             playing = false;
@@ -657,10 +658,61 @@ namespace LolHost
 
             animationTimer = timers.setInterval(renderCharacterSelection, 140);
             setStatus("Choose your champion");
+            _ = startSelectionSound();
+        }
+
+        // The original's character selection is not silent: the intro music (LOREINTR track 6), King Richard's
+        // greeting (KING01), each hero introducing themselves when picked (000A0.., 000M0.., 000K0.., 000C0..) and the
+        // king's answer to the choice (KING03). This page is the interface's own, so a small engine plays them.
+        LandsOfLore selSound;
+        int selVoiceToken;
+
+        async Task startSelectionSound()
+        {
+            stopSelectionSound();
+            var e = new LandsOfLore(new Lol.Resources(dataRoot, fetchBytes), sched, log, presentEngine) { audioHost = audio };
+            selSound = e;
+            e.speechEnabledFlag = settings.voice != "text" && Array.IndexOf(Environment.GetCommandLineArgs(), "--nospeech") < 0;
+            e.sfxEnabled = settings.sfx;
+            e.musicEnabled = settings.music;
+            try
+            {
+                await e.preInit();
+                await e.res.loadPak($"{e.languageExt}/INTROVOC.PAK");
+            }
+            catch (Exception error) { log($"selection sound: {error.Message}"); }
+            if (selSound != e) return;
+            e.snd_loadSoundFileByName("LOREINTR");
+            e.snd_playRawTrack(6);
+            await e.snd_voicePlayAsync("KING01");
+        }
+
+        void stopSelectionSound()
+        {
+            selVoiceToken += 1;
+            if (selSound != null) { try { selSound.snd_dispose(); } catch (Exception) { /* already gone */ } }
+            selSound = null;
+        }
+
+        /// <summary>The picked hero speaks: their voice files one after another, until another choice.</summary>
+        async Task selectionHeroVoice(int index)
+        {
+            var e = selSound;
+            if (e == null || index < 0 || index > 3) return;
+            int token = ++selVoiceToken;
+            e.snd_stopVoice();
+            char who = "AMKC"[index];
+            for (int n = 0; n < 10 && token == selVoiceToken && selSound == e; n += 1)
+            {
+                string file = $"000{who}{n}";
+                if (!e.res.exists(file + ".VOC")) break;
+                await e.snd_voicePlayAsync(file);
+            }
         }
 
         void confirmCharacter(int index)
         {
+            if (selectedCharacter != index) _ = selectionHeroVoice(index);
             selectedCharacter = index;
             var buttons = controls.QAll(".character-button");
             for (int buttonIndex = 0; buttonIndex < buttons.Count; buttonIndex += 1)
@@ -689,6 +741,8 @@ namespace LolHost
             reject.On("click", () =>
             {
                 selectedCharacter = -1;
+                selVoiceToken += 1;
+                selSound?.snd_stopVoice();
                 panel.RemoveFromHierarchy();
                 foreach (var button in controls.QAll(".character-button")) button.RemoveFromClassList("selected");
             });

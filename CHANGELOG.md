@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1
+
+- The character selection has its sound back, as in the original: the intro music, King Richard's greeting, each
+  hero introducing themselves when you pick them, and the king's answer to your choice before the game begins.
+
 ## 0.3.0
 
 This release is about faithfulness. Every rule of the game was compared with ScummVM's Lands of Lore code and then

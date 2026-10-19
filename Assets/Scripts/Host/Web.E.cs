@@ -1130,10 +1130,26 @@ namespace LolHost
             return false;
         }
 
-        void enterPlayfield()
+        bool enteringPlayfield;
+
+        async void enterPlayfield()
         {
-            if (selectedCharacter < 0) return;
+            if (selectedCharacter < 0 || enteringPlayfield) return;
             int character = selectedCharacter;
+            // the king answers the choice before the game begins (kingSelectionOutro)
+            enteringPlayfield = true;
+            try
+            {
+                var e = selSound;
+                if (e != null)
+                {
+                    selVoiceToken += 1;
+                    e.snd_stopVoice();
+                    await e.snd_voicePlayAsync("KING03");
+                }
+            }
+            finally { enteringPlayfield = false; }
+            stopSelectionSound();
             // A new game is a new campaign: the journal, the bestiary, the people met, the chest, the imp's
             // errand and how deep the pit has been beaten all start over. Only the browser's own preferences
             // (settings, filter, level mods) are left alone.
@@ -1145,6 +1161,7 @@ namespace LolHost
         async Task runGame(Func<LandsOfLore, Task<string>> start)
         {
             stopAnimation();
+            stopSelectionSound();
             clearControls();
             playing = true;
             screen.canvas.AddToClassList("in-game");
