@@ -56,6 +56,8 @@ namespace Lol
     {
         public int block;
         public bool open;
+        /// <summary>marked with the floor's tell: a careful party finds it (only these may hide what the floor needs)</summary>
+        public bool told;
     }
 
     public sealed class PitSwitch
@@ -316,9 +318,16 @@ namespace Lol
                 b = next;
             }
             Func<int, bool> isLink = (b) => (((b & 31) - rect.x) & 1) != (((b >> 5) - rect.y) & 1);
-            var gateChoices = path.Where(b => isLink(b) && treeDist[b] >= Math.Max(2, farD * 0.45) && treeDist[b] <= farD * 0.8).ToList();
-            if (gateChoices.Count == 0) gateChoices = path.Where(b => isLink(b) && treeDist[b] >= 2 && b != far).ToList();
-            int gate = gateChoices.Count != 0 ? gateChoices[Js.Floor(random() * gateChoices.Count)] : -1;
+            // The gate splits the floor: the start side has to be a real part of it (its dead ends hold the puzzle),
+            // the far side a real part too (the stairs and the master's lair). Pick by how the floor divides, not by
+            // distance alone: a gate near the start leaves the puzzle nowhere to hide.
+            int total = treeDist.Count;
+            var gateChoices = path.Where(b => isLink(b) && treeDist[b] >= 2 && b != far)
+                .Select(b => (b, share: (total - distances(far, b).Count - 1) / (double)total))
+                .ToList();
+            var fair = gateChoices.Where(c => c.share >= 0.35 && c.share <= 0.8).OrderBy(c => Math.Abs(c.share - 0.55)).Take(3).ToList();
+            if (fair.Count == 0) fair = gateChoices.OrderBy(c => Math.Abs(c.share - 0.55)).Take(1).ToList();
+            int gate = fair.Count != 0 ? fair[Js.Floor(random() * fair.Count)].b : -1;
             var sideB = gate >= 0 ? new HashSet<int>(distances(far, gate).Keys) : new HashSet<int>();
             Func<int, int> side = (b) => sideB.Contains(b) ? 1 : 0;
 
@@ -651,7 +660,7 @@ namespace Lol
             return new DungeonInfo
             {
                 depth = d.depth, level = d.level, objective = d.objective, need = d.need != 0 ? d.need : 1, exitBlock = d.exitBlock, ready = d.ready,
-                monstersLeft = monsters.Count(m => m.properties != null && m.hitPoints > 0 && m.mode < 13),
+                monstersLeft = uiDungeonFoesLeft(),
                 bossAlive = monsters.Any(m => m.dungeonBoss != 0 && m.hitPoints > 0),
                 kills = d.kills, sigilsBefore = d.sigilsBefore,
                 levers = (d.levers ?? new List<DungeonLever>()).Count, leversPulled = d.leversPulled, vaultOpen = d.vault != null && d.vault.open,
@@ -686,7 +695,8 @@ namespace Lol
             var count = new Dictionary<int, int>();   // a Map: iterated in insertion order
             foreach (var l in levelBlockProperties) foreach (int w in l.walls) if (w != 0) count[w] = (count.TryGetValue(w, out int c) ? c : 0) + 1;
             var own = uiDungeonWallSet();
-            Func<int, bool> usable = (w) => w > 0 && w != 0x1a && own.Contains(w) && wllVmpMap[w] != 0 && (wllWallFlags[w] & 1) != 0 && specialWallTypes[w] == 0;
+            // solid to the party (1) and to monsters (4): a rock that lets monsters through puts them where nothing reaches
+            Func<int, bool> usable = (w) => w > 0 && w != 0x1a && own.Contains(w) && wllVmpMap[w] != 0 && (wllWallFlags[w] & 5) == 5 && specialWallTypes[w] == 0;
             int best = 0;
             int most = -1;
             foreach (var e in count) if (usable(e.Key) && e.Value > most) { most = e.Value; best = e.Key; }
@@ -755,11 +765,11 @@ namespace Lol
             {
                 var m = monsters[i];
                 if (m != null && m.block != 0) placeMonster(m, 0, 0);
-                // Whatever this monster was carrying goes with it. The item records are a fixed table of a few
-                // hundred entries shared by the whole world; dropping a monster without freeing them leaks a
-                // handful every time a floor is built, and a few dozen floors later the table is full and the
-                // next level to load dies with "Out of item slots".
-                int held = m != null ? m.assignedItems : 0;
+                // On a level never visited, what its monsters carry was made by its .INI just now and will be made
+                // again on the real first visit: it goes with them (kept, the table would fill floor by floor). On a
+                // visited level these are the level's own monsters, put back when the party leaves still holding
+                // their loot: their items stay (itemRecordsInUse keeps them from being taken for the floor's).
+                int held = m != null && !backup.hadFlag ? m.assignedItems : 0;
                 int guard = 0;
                 while (held != 0 && guard++ < 32)
                 {
@@ -856,6 +866,23 @@ namespace Lol
         // What the borrowed level can furnish a floor with: its own doors, levers and decorated walls.
         // A level without levers gets a pair minted from one of its decorated walls, the way the camp
         // mints its doors (indices nothing in a LEVEL<N>.WLL ever uses).
+        /// <summary>Whether a wall type's picture, seen from the block in front, lies where a click on the wall lands (the
+        /// wall's click area is 136-264 x 8-104 on screen): some decorations sit at the foot of the wall, below it, and
+        /// a switch or a lever drawn there can never be worked.</summary>
+        bool decorClickable(int w)
+        {
+            for (int l = wllShapeMap[w]; l > 0; l = levelDecorationProperties[l].next)
+            {
+                var p = levelDecorationProperties[l];
+                if (p.shapeIndex[1] == 0xffff) continue;
+                var shape = levelDecorationShapes[p.shapeIndex[1]];
+                if (shape == null) continue;
+                int cx = p.shapeX[1] + clickedShapeXOffs + (shape.width >> 1), cy = p.shapeY[1] + clickedShapeYOffs + (shape.height >> 1);
+                return cx >= 140 && cx <= 260 && cy >= 12 && cy <= 100;
+            }
+            return false;
+        }
+
         public DungeonKit uiDungeonFurnish()
         {
             Func<int, int> flags = (w) => wllWallFlags[w];
@@ -867,6 +894,9 @@ namespace Lol
                 if (specialWallTypes[w] != 5) continue;                          // a door with a switch to click
                 if ((flags(w) & 8) == 0 || (flags(w) & 0x20) == 0) continue;     // a door, and shut
                 if ((flags(w) & 1) == 0) continue;                               // solid while it is shut
+                if (wllShapeMap[w] <= 0) continue;                               // a switch the party can click: some of a
+                                                                                 // level's doors are worked from elsewhere
+                                                                                 // (a lever, a script) and never open here
                 door = w;
             }
             // Decoration: only walls that are plain walls in every other respect. A level's "decorated"
@@ -886,7 +916,7 @@ namespace Lol
             for (int w = 1; w < 255 && lever == 0; w += 1)
             {
                 if (!own.Contains(w) || !own.Contains(w + 1)) continue;
-                if (specialWallTypes[w] == 2 && specialWallTypes[w + 1] == 3 && wllVmpMap[w] != 0) lever = w;
+                if (specialWallTypes[w] == 2 && specialWallTypes[w + 1] == 3 && wllVmpMap[w] != 0 && decorClickable(w) && decorClickable(w + 1)) lever = w;
             }
             return new DungeonKit { door = door, lever = lever, decor = decor };
         }
@@ -917,7 +947,7 @@ namespace Lol
             d.stairs = plan.exit;
             var alcoveCells = new HashSet<int>(plan.alcoves.SelectMany(x => x.cells));
             var secretBlocks = new HashSet<int>(plan.alcoves.Select(x => x.secret));
-            var sideA = plan.cells.Where(b => !plan.regionB.Contains(b)).ToList();
+            var sideA = plan.cells.Where(b => !plan.regionB.Contains(b) && b != plan.gate).ToList();   // the gate is no place to stand
             Func<int, int, DungeonDoor> hangDoor = (b, type) =>
             {
                 var l = levelBlockProperties[b];
@@ -932,13 +962,16 @@ namespace Lol
             // a puzzle this level cannot furnish is swapped for one it can
             string puzzle = d.objective;
             if (puzzle == "levers" && kit.lever == 0) puzzle = kit.decor.Count != 0 ? "switch" : "clear";
-            if (puzzle == "switch" && kit.decor.Count == 0) puzzle = kit.lever != 0 ? "levers" : "clear";
             d.objective = puzzle;
             // decoration: one type of the level's decorated walls marks the sliding stones (the floor's tell, as the
             // original's cracked and odd-coloured walls are); the switch hides among the others
             d.clueWall = kit.decor.Count != 0 ? kit.decor[0] : 0;
             var pool = kit.decor.Count > 1 ? kit.decor.Skip(1).ToList() : new List<int>();
-            d.switchType = pool.Count != 0 ? pool[Js.Floor(random() * pool.Count)] : d.clueWall;
+            // the switch is one a player can click: its picture inside the wall's click area
+            var pressable = pool.Where(decorClickable).ToList();
+            if (pressable.Count == 0 && d.clueWall != 0 && decorClickable(d.clueWall)) pressable.Add(d.clueWall);
+            d.switchType = pressable.Count != 0 ? pressable[Js.Floor(random() * pressable.Count)] : 0;
+            if (puzzle == "switch" && d.switchType == 0) puzzle = d.objective = kit.lever != 0 ? "levers" : "clear";   // nothing here a player could press
 
             // the gate
             if (plan.gate >= 0)
@@ -958,10 +991,14 @@ namespace Lol
             }
 
             // the sliding stones, each with the tell on the face the corridor sees (deeper down, only some of them)
+            var told = new List<PitAlcove>();   // the alcoves a careful party can find: only these may hold what the floor needs
             foreach (var alc in plan.alcoves)
             {
-                d.secrets.Add(new PitSecret { block = alc.secret });
+                var secret = new PitSecret { block = alc.secret };
+                d.secrets.Add(secret);
                 if (d.clueWall == 0 || (d.depth >= 6 && random() > 0.6)) continue;
+                told.Add(alc);
+                secret.told = true;
                 for (int dir = 0; dir < 4; dir += 1)
                 {
                     int nb = alc.secret + STEP[dir];
@@ -989,7 +1026,7 @@ namespace Lol
                 int wanted = Math.Min(4, 2 + Js.FloorDiv(d.depth, 5));
                 var where = new List<int>();
                 // deeper down, one of them waits in an alcove
-                if (d.depth >= 4 && plan.alcoves.Count != 0) where.Add(plan.alcoves[Js.Floor(random() * plan.alcoves.Count)].cells[0]);
+                if (d.depth >= 4 && told.Count != 0) where.Add(told[Js.Floor(random() * told.Count)].cells[0]);
                 var spread = sideA.Where(b => b != plan.start && (plan.dist.TryGetValue(b, out int dd) ? dd : 0) >= 3).ToList();
                 pitShuffle(spread, random);
                 where.AddRange(spread);
@@ -1011,9 +1048,10 @@ namespace Lol
             }
             if (puzzle == "switch")
             {
-                // set into the end wall of a dead end (deeper down, possibly an alcove's)
-                var ends = (d.depth >= 6 ? hiding : hiding.Where(b => !alcoveCells.Contains(b))).ToList();
-                if (ends.Count == 0) ends = hiding;
+                // set into the end wall of a dead end (deeper down, possibly a marked alcove's - never one nothing tells of)
+                var toldCells = new HashSet<int>(told.SelectMany(x => x.cells));
+                var ends = hiding.Where(b => !alcoveCells.Contains(b) || (d.depth >= 6 && toldCells.Contains(b))).ToList();
+                if (ends.Count == 0) ends = hiding.Where(b => !alcoveCells.Contains(b) || toldCells.Contains(b)).ToList();
                 foreach (int at in ends.Skip(Js.Floor(random() * Math.Min(3, ends.Count))).Concat(ends))
                 {
                     // the end wall: the face across from the one way in
@@ -1052,11 +1090,15 @@ namespace Lol
             };
             if (kit.door != 0)
             {
+                // the gate and the sliding stones are ways through once they open: a door beside one is turned so its
+                // side would seal that way, so it never goes there
+                Func<int, bool> way = (b) => open(b) || b == plan.gate || secretBlocks.Contains(b);
                 var straights = plan.cells.Where(b =>
                 {
-                    bool ns = open(b - 32) && open(b + 32) && solid(b - 1) && solid(b + 1);
-                    bool ew = open(b - 1) && open(b + 1) && solid(b - 32) && solid(b + 32);
-                    return (ns || ew) && b != plan.start && b != plan.exit && b != plan.gate;
+                    bool ns = way(b - 32) && way(b + 32) && !way(b - 1) && !way(b + 1);
+                    bool ew = way(b - 1) && way(b + 1) && !way(b - 32) && !way(b + 32);
+                    bool besideWay = new[] { 0, 1, 2, 3 }.Any(x => b + STEP[x] == plan.gate || secretBlocks.Contains(b + STEP[x]));
+                    return (ns || ew) && !besideWay && b != plan.start && b != plan.exit && b != plan.gate;
                 }).ToList();
                 int baseline = reaches(new HashSet<int>());
                 var shut = new HashSet<int>();
@@ -1066,16 +1108,49 @@ namespace Lol
                     int ai = Js.Floor(random() * straights.Count);
                     int at = straights[ai];
                     straights.RemoveAt(ai);
+                    // never beside another door: a door hung next to one takes its neighbour for wall, turns across the
+                    // corridor and seals it
+                    if (d.doors.Any(x => Math.Abs((x.block & 31) - (at & 31)) + Math.Abs((x.block >> 5) - (at >> 5)) <= 1)) continue;
                     shut.Add(at);
                     if (reaches(shut) < baseline - shut.Count) { shut.Remove(at); continue; }
                     d.doors.Add(hangDoor(at, kit.door));
                 }
             }
 
-            // traps, from floor six: floors that throw the party elsewhere; from floor ten: floors that turn it about
-            var trapSpots = sideA.Where(b => b != plan.start && new[] { 0, 1, 2, 3 }.Count(x => open(b + STEP[x])) == 2
+            // traps, from floor six: floors that throw the party elsewhere; from floor ten: floors that turn it about.
+            // A floor that throws the party away every time it is stepped on is a wall: a teleport only goes where
+            // the floor has another way round (never on the one way to anything), never where a lever is worked
+            // from, and never on the way down.
+            var leverStands = new HashSet<int>(d.levers.Select(l => l.block + STEP[l.dir]));
+            var doorBlocks = new HashSet<int>(d.doors.Select(x => x.block));
+            var sideASet = new HashSet<int>(sideA);
+            var teleportBlocks = new HashSet<int>();
+            Func<int, bool> onLoop = (cut) =>
+            {
+                // everything of the start side still reachable from the start with `cut` and every teleport already
+                // placed taken away: two traps on the two ways round a loop cut it as surely as one on a corridor
+                var seen = new HashSet<int> { plan.start };
+                var queue = new Queue<int>();
+                queue.Enqueue(plan.start);
+                while (queue.Count > 0)
+                {
+                    int b = queue.Dequeue();
+                    for (int dir = 0; dir < 4; dir += 1)
+                    {
+                        int nb = b + STEP[dir];
+                        if (nb == cut || teleportBlocks.Contains(nb) || seen.Contains(nb) || !sideASet.Contains(nb)) continue;
+                        seen.Add(nb);
+                        queue.Enqueue(nb);
+                    }
+                }
+                return seen.Count == sideASet.Count - teleportBlocks.Count - 1;
+            };
+            // nor beside anything the party has to stand at: a sliding stone, the switch, a lever
+            var keepClear = new HashSet<int>(secretBlocks.Concat(d.levers.Select(l => l.block)));
+            if (d.switchWall != null) keepClear.Add(d.switchWall.block);
+            var trapSpots = sideA.Where(b => b != plan.start && b != plan.exit && b != plan.gate && new[] { 0, 1, 2, 3 }.Count(x => open(b + STEP[x])) == 2
                 && (plan.gate < 0 || Math.Abs((b & 31) - (plan.gate & 31)) + Math.Abs((b >> 5) - (plan.gate >> 5)) > 1)
-                && !d.doors.Any(x => x.block == b)).ToList();
+                && !doorBlocks.Contains(b) && !leverStands.Contains(b) && !new[] { 0, 1, 2, 3 }.Any(x => keepClear.Contains(b + STEP[x]))).ToList();
             pitShuffle(trapSpots, random);
             int teleports = d.depth >= 6 ? Math.Min(3, 1 + Js.FloorDiv(d.depth - 6, 5)) : 0;
             int spins = d.depth >= 10 ? Math.Min(3, 1 + Js.FloorDiv(d.depth - 10, 6)) : 0;
@@ -1084,10 +1159,15 @@ namespace Lol
                 if (teleports == 0 && spins == 0) break;
                 if (teleports > 0)
                 {
+                    if (!onLoop(at)) continue;
                     int from = plan.dist.TryGetValue(at, out int fd) ? fd : 0;
-                    var targets = sideA.Where(b => b != plan.start && Math.Abs((plan.dist.TryGetValue(b, out int td) ? td : 0) - from) >= 6 && !trapSpots.Take(0).Contains(b)).ToList();
+                    // somewhere ordinary to land: a plain open block, not the gate, a door or another trap
+                    var targets = sideA.Where(b => b != plan.start && b != plan.gate && open(b) && !doorBlocks.Contains(b)
+                        && !d.traps.Any(t => t.block == b) && b != at
+                        && Math.Abs((plan.dist.TryGetValue(b, out int td) ? td : 0) - from) >= 6).ToList();
                     if (targets.Count == 0) continue;
                     d.traps.Add(new PitTrap { block = at, kind = "teleport", to = targets[Js.Floor(random() * targets.Count)] });
+                    teleportBlocks.Add(at);
                     teleports -= 1;
                 }
                 else { d.traps.Add(new PitTrap { block = at, kind = "spin" }); spins -= 1; }
@@ -1155,13 +1235,19 @@ namespace Lol
             if (d == null) return false;
             if (d.vault != null && d.vault.block == block && !d.vault.open) return true;
             if (d.gate == null || d.gate.block != block || !d.gate.locked) return false;
-            if (d.objective == "key" && itemInHand != 0 && uiExtraItem(itemInHand)?.id == "pitkey")
+            if (d.objective == "key")
             {
-                int key = itemInHand;
-                _ = setHandItem(0);
-                deleteItem(key);
-                uiDungeonOpenGate("The key turns in the lock.");
-                return true;
+                // the key opens it from the hand or from the pack: a key held over a plain wall would be thrown
+                int key = itemInHand != 0 && uiExtraItem(itemInHand)?.id == "pitkey" ? itemInHand : 0;
+                int slot = key == 0 ? Array.FindIndex(inventory, it => it != 0 && uiExtraItem(it)?.id == "pitkey") : -1;
+                if (key != 0) _ = setHandItem(0);
+                else if (slot >= 0) { key = inventory[slot]; inventory[slot] = 0; gui_drawInventory(); }
+                if (key != 0)
+                {
+                    deleteItem(key);
+                    uiDungeonOpenGate("The key turns in the lock.");
+                    return true;
+                }
             }
             string why = d.objective switch
             {
@@ -1181,6 +1267,8 @@ namespace Lol
         {
             var d = dungeon;
             if (d == null) return false;
+            // a gate sealed by a wall (the level has no doors): the key turns in it, and it says why it stays shut
+            if (d.gate != null && !d.gate.door && d.gate.block == block && !d.gate.open) return uiDungeonDoorLocked(block);
             var secret = d.secrets?.FirstOrDefault(x => x.block == block && !x.open);
             if (secret != null)
             {
@@ -1258,6 +1346,9 @@ namespace Lol
             var random = dungeonRng($"{seed}:monsters");
             var types = uiDungeonTypes();
             if (types.Count == 0) return 0;
+            // kinds the walls hold, where the level has any: one that walks through them can wander into the rock
+            var held = types.Where(t => (monsterProperties[t].flags & 0x1000) == 0).ToList();
+            if (held.Count != 0) types = held;
             var @sealed = uiDungeonSealed();
             var spotsB = plan.cells.Where(b => plan.regionB.Contains(b) && !@sealed.Contains(b)).ToList();
             var spotsA = plan.cells.Where(b => !plan.regionB.Contains(b) && (plan.dist.TryGetValue(b, out int dd) ? dd : 0) >= 3 && !@sealed.Contains(b)).ToList();
@@ -1274,7 +1365,7 @@ namespace Lol
                     tries += 1;
                     int at = Js.Floor(random() * spots.Count);
                     int block = spots[at];
-                    int facing = (Js.Floor(random() * 4) << 1) & 6;
+                    int facing = Js.Floor(random() * 4);   // 0-3: initMonster takes the facing, not the 8-way direction
                     List<int> order;
                     if (random() < 0.5) { order = types.ToList(); Dungeon_v8Sort(order, (x, y) => random() - 0.5); }
                     else order = bySize;
@@ -1349,6 +1440,10 @@ namespace Lol
             if (plan == null) return 0;
             var types = uiDungeonTypes();
             if (types.Count == 0) return 0;
+            // the strongest kind that walls hold (a kind that walks through them could carry the fight into the rock)
+            var held = types.Where(t => (monsterProperties[t].flags & 0x1000) == 0).ToList();
+            if (held.Count == 0) return -1;   // only kinds that walk through walls: no master here (the floor is cleared instead)
+            types = held;
             int type = types.Aggregate(types[0], (best, i) => (monsterProperties[i].hitPoints > monsterProperties[best].hitPoints ? i : best));
             var random = dungeonRng($"{seed}:boss");
             var @sealed = uiDungeonSealed();
@@ -1356,7 +1451,7 @@ namespace Lol
             foreach (int block in lair.Concat(plan.cells))
             {
                 if (@sealed.Contains(block)) continue;
-                int index = initMonster(new[] { block, 0x80, 0x80, (Js.Floor(random() * 4) << 1) & 6, type, 0, 0, 0, 0, 0, 0 });
+                int index = initMonster(new[] { block, 0x80, 0x80, Js.Floor(random() * 4), type, 0, 0, 0, 0, 0, 0 });
                 if (index == -1) continue; // nothing of this level fits here
                 var m = monsters[index];
                 m.ngplus = Js.FloorDiv(depth, 3);
@@ -1381,8 +1476,8 @@ namespace Lol
             if (d.bossEnraged || boss == null || boss.hitPoints * 2 > d.bossMaxHp) return;
             d.bossEnraged = true;
             boss.pitScale = boss.pitScale * 1.35;
-            var types = uiDungeonTypes().Where(t => t != boss.type).ToList();
-            if (types.Count == 0) types = uiDungeonTypes();
+            var types = uiDungeonTypes().Where(t => t != boss.type && (monsterProperties[t].flags & 0x1000) == 0).ToList();
+            if (types.Count == 0) types = uiDungeonTypes().Where(t => (monsterProperties[t].flags & 0x1000) == 0).ToList();
             int called = 0;
             var fresh = new HashSet<Monster>();
             foreach (int dir in new[] { 0, 1, 2, 3 })
@@ -1399,6 +1494,147 @@ namespace Lol
             }
             uiDungeonBalance(d.depth, fresh);
             ui?.Invoke("message", new object[] { called > 0 ? "The master roars in fury, and its guards come running!" : "The master roars in fury!", "combat" });
+        }
+
+        // ---- the floor's rules (Unity build) ----
+        // Setting a floor up, keeping its puzzle's score and saying whether the way down is open all live here, so
+        // the floor can be played (and tested) without the page.
+
+        /// <summary>The port's own items with their art (the page sets it; the art means nothing to the engine).</summary>
+        public IList<ExtraItemDef> pitItemDefs;
+        Dictionary<string, int> pitProps() => uiCraftRegisterItems(pitItemDefs ?? ERRAND_ITEMS.Concat(DUNGEON_ITEMS).ToList());
+        public int? pitProp(string id) => pitProps().TryGetValue(id, out int p) ? p : (int?)null;
+
+        /// <summary>How many items of a property the party holds: the pack, the hand and what the heroes carry.</summary>
+        public int uiPitHolding(int prop)
+        {
+            int n = uiCountOfProperty(prop);
+            if (itemInHand != 0 && itemsInPlay[itemInHand].itemPropertyIndex == prop) n += 1;
+            foreach (var c in characters) if ((c.flags & 1) != 0) foreach (int it in c.items) if (it != 0 && itemsInPlay[it].itemPropertyIndex == prop) n += 1;
+            return n;
+        }
+
+        /// <summary>The imp's sigils the party holds now.</summary>
+        public int uiPitSigils() { var p = pitProp("sigil"); return p == null ? 0 : uiPitHolding(p.Value); }
+
+        /// <summary>Whether the party can step from `from` into the next block that way: open, or a door it can work.
+        /// The pit's own locks (the shut gate, a sliding stone not found yet) count as walls.</summary>
+        public bool uiPitPassable(int from, int dir)
+        {
+            int to = from + STEP[dir];
+            if (to < 0 || to >= 1024) return false;
+            var d = dungeon;
+            if (d != null && d.gate != null && !d.gate.open && d.gate.locked && to == d.gate.block) return false;
+            int wall = levelBlockProperties[to].walls[dir ^ 2];
+            int flags = wllWallFlags[wall];
+            if ((flags & 1) == 0) return true;
+            return (flags & 8) != 0 && specialWallTypes[wall] == 5;   // a door with a switch: the party opens it
+        }
+
+        /// <summary>Every block the party can walk to from `from` as the floor stands now (teleport traps are not
+        /// stepped on: they throw the party elsewhere).</summary>
+        public HashSet<int> uiPitReach(int from)
+        {
+            var d = dungeon;
+            var traps = new HashSet<int>((d?.traps ?? new List<PitTrap>()).Where(t => t.kind == "teleport").Select(t => t.block));
+            var seen = new HashSet<int> { from };
+            var queue = new Queue<int>();
+            queue.Enqueue(from);
+            while (queue.Count > 0)
+            {
+                int b = queue.Dequeue();
+                if (b != from && traps.Contains(b)) continue;   // reached, but nothing beyond it is reached through it
+                for (int dir = 0; dir < 4; dir += 1)
+                {
+                    int nb = b + STEP[dir];
+                    if (seen.Contains(nb) || !uiPitPassable(b, dir)) continue;
+                    seen.Add(nb);
+                    queue.Enqueue(nb);
+                }
+            }
+            return seen;
+        }
+
+        /// <summary>The floor's monsters the party can get at: what "clear the floor" counts. Guards beyond the shut
+        /// gate do not stand in the way of opening it.</summary>
+        public int uiDungeonFoesLeft()
+        {
+            var d = dungeon;
+            if (d == null || d.plan == null) return 0;
+            var reach = uiPitReach(d.plan.start);
+            return monsters.Count(m => m.properties != null && m.hitPoints > 0 && m.mode < 13 && m.block != 0 && reach.Contains(m.block));
+        }
+
+        public sealed class PitSetup { public string objective; public int placed, need; }
+
+        /// <summary>Fills a floor the engine has just written: its monsters, its master, the things its puzzle needs and
+        /// a few worth finding. Whatever the floor cannot furnish, its gate opens without.</summary>
+        public async Task<PitSetup> uiDungeonSetup(FloorPlan plan)
+        {
+            var d = dungeon;
+            if (d == null) return null;
+            var props = pitProps();
+            int? Prop(string id) => props.TryGetValue(id, out int p) ? p : (int?)null;
+            string objective = d.objective;   // uiDungeonDress may have swapped a puzzle this level cannot furnish
+            d.sigilsBefore = uiPitSigils();
+            int placed = uiDungeonPopulate(monsterCount(plan.depth), plan.depth, plan.seed);
+            if (objective == "boss" && uiDungeonBoss(plan.depth, plan.seed) < 0) objective = "clear";   // nothing here would stand as a master
+            d.objective = objective;
+            d.need = 1;
+            // Required things lie where the party can walk without finding anything hidden: the dead ends of the
+            // start side, the far ones first. The hidden alcoves get the extras.
+            var reach = uiPitReach(d.plan.start);
+            // never on a trap (stepping there to pick it up throws the party away), a door or the gate
+            var unfit = new HashSet<int>(d.traps.Select(t => t.block).Concat(d.doors.Select(x => x.block)));
+            if (d.gate != null) unfit.Add(d.gate.block);
+            Func<int, bool> fit = (b) => b != d.plan.start && !d.plan.regionB.Contains(b) && reach.Contains(b) && !unfit.Contains(b);
+            Func<int, int> far = (b) => d.plan.dist.TryGetValue(b, out int dd) ? dd : 0;
+            var fair = d.plan.deadEnds.Where(fit).OrderByDescending(far).ToList();
+            // more asked for than there are dead ends: the far blocks of the start side, one thing to a block
+            fair.AddRange(d.plan.cells.Where(b => fit(b) && !fair.Contains(b) && far(b) >= 3).OrderByDescending(far));
+            int nextFair = 0;
+            int NextFair() => fair.Count == 0 ? d.plan.start : fair[nextFair++ % fair.Count];
+            string fallback = null;
+            if (objective == "sigils")
+            {
+                int want = Math.Max(1, Math.Min(plan.need, Math.Max(1, fair.Count)));
+                int put = 0;
+                for (int i = 0; i < want; i += 1) if (await uiDungeonPlaceItem(Prop("sigil"), NextFair()) != 0) put += 1;
+                d.need = put;
+                if (put == 0) fallback = "The imp's sigils are nowhere to be found: the gate has been left open.";
+            }
+            if (objective == "key" && await uiDungeonPlaceItem(Prop("pitkey"), NextFair()) == 0) fallback = "The gate's key is nowhere to be found: the gate has been left open.";
+            if (objective == "clear" && uiDungeonFoesLeft() == 0) fallback = "Nothing on this floor is left to fight: the gate stands open.";
+            if (fallback != null) uiDungeonOpenGate(fallback);
+            // something worth the search: the hidden alcoves first, then the dead ends left over, more deeper down
+            var lootSpots = d.plan.alcoves.Select(a => a.cells[0]).Concat(fair.Skip(nextFair)).ToList();
+            var loot = new[] { "heal", "mana", "antidote", "strength", "agility", "arcane" }.Select(Prop).Where(x => x != null).ToList();
+            for (int i = 0; i < 1 + plan.depth / 3 && loot.Count != 0 && lootSpots.Count != 0; i += 1)
+                await uiDungeonPlaceItem(loot[(i + plan.depth) % loot.Count], lootSpots[i % lootSpots.Count]);
+            d.ready = true;   // only now may the floor be finished: until everything is in place a poll would see an empty floor
+            return new PitSetup { objective = objective, placed = placed, need = d.need };
+        }
+
+        /// <summary>Every frame in the pit: the master's rage, and the puzzles kept by score (the floor's monsters, the
+        /// imp's sigils) opening the gate when they are done.</summary>
+        public void uiDungeonTick()
+        {
+            var d = dungeon;
+            if (d == null || !d.ready) return;
+            uiDungeonBossTick();
+            if (d.gate == null || d.gate.open) return;
+            if (d.objective == "clear" && uiDungeonFoesLeft() == 0) uiDungeonOpenGate("The last of them falls. Far off, a gate grinds open.");
+            else if (d.objective == "sigils" && uiPitSigils() - d.sigilsBefore >= d.need) uiDungeonOpenGate("The sigils grow warm in your pack. Far off, a gate grinds open.");
+        }
+
+        /// <summary>Why the way down is not open yet, or null when it is.</summary>
+        public string uiDungeonStairsBlocked()
+        {
+            var d = dungeon;
+            if (d == null || !d.ready) return "";
+            if (d.gate != null && !d.gate.open && d.gate.locked) return "The way down is here, but the gate behind you is still shut: the floor is not done.";
+            if (d.objective == "boss" && monsters.Any(m => m.dungeonBoss != 0 && m.hitPoints > 0)) return "The way down is here, but the floor's master still walks. It will not let you pass.";
+            return null;
         }
 
         // Drops one of the port's own items in the floor (the sigil an objective asks for).
@@ -1577,6 +1813,10 @@ namespace Lol
                 },
             };
             scriptData = null; // the borrowed level's scripts stay silent after a load, too
+            pitProps();        // the pit's own items (its key, its sigils) are known before anything asks what they are
+            // floors saved before 0.4 spawned monsters facing 4 or 6 (an 8-way direction where 0-3 belongs), which
+            // takes the drawing down: bring them back into range
+            foreach (var m in monsters) if (m != null && m.facing > 3) m.facing &= 3;
             return 1;
         }
 

@@ -243,9 +243,9 @@ In the original game Timothy, the scout from the Grey Eagle, is found dying in t
 ## The Imp's Pit
 keys: pit dungeon floors generated endless run objective climb out gate lever switch key sigil master boss hidden passage secret trap stairs deeper
 The imp can send the party down into the pit: generated floors built from levels you have already walked, as deep as you dare to go.
-- Every floor is cut in two by a gate. The stairs down lie beyond it, and the gate opens only when you solve the floor: pull all its levers, find its hidden switch (try the dead ends), find its key and use it on the gate, gather the imp's sigils, or kill everything on the floor.
+- Every floor is cut in two by a gate. The stairs down lie beyond it, and the gate opens only when you solve the floor: pull all its levers, find its hidden switch (try the dead ends), find its key and click the gate with it in your pack, gather the imp's sigils, or kill everything on your side of the gate.
 - Every fifth floor belongs to a master: a far bigger and tougher version of the floor's strongest creature, waiting by the stairs. At half its strength it flies into a rage and calls its guards. You cannot take the stairs while it lives.
-- Some walls are not what they seem. A wall with an odd decoration may be a stone that slides away when you click it, into a hidden alcove with potions, a lever, the key or a sigil. Deeper down, not every such stone is marked.
+- Some walls are not what they seem. A wall with an odd decoration may be a stone that slides away when you click it, into a hidden alcove with potions, and deeper down sometimes a lever or the switch. The key and the sigils always lie where you can walk. Deeper down, not every such stone is marked: an unmarked one only ever hides extras.
 - From floor 6, some floors throw the party to another corridor when stepped on. From floor 10, some turn it about.
 - Reach the stairs with the gate open and the floor is beaten: the imp pays at once, crowns, experience, reagents and potions. Then go down to the next floor, or stay.
 - Each floor is harder than the one before, and there is no bottom. The monsters are measured against your party: the first floor is a fair fight; by floor ten every hit hurts and every creature takes many blows.

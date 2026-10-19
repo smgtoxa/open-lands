@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased
+
+### The Imp's Pit, made reliable
+Every floor is now played through by an automatic tester before it ships: every level of the game as the borrowed
+level, floors 1 to 30, every puzzle, two layouts each, a save and load in the middle of the floor, and a run of 40
+floors down in a row. Out of 6,760 floors, all can be finished. What it found and what was fixed:
+- "Clear the floor" could never be finished: the gate waited for the guards beyond it too. Only what you can reach counts now.
+- A key did nothing on a level without doors (its gate is a wall): click the gate with the key in your pack, door or wall.
+- The key, the sigils or the switch could end up behind a hidden stone with no mark on it, or nowhere at all on a
+  floor whose start side was a few corridors. The gate is placed so both sides are a real part of the floor, and
+  what a floor needs always lies where you can walk (or behind a marked stone).
+- Doors that only a lever elsewhere could open were used as the pit's doors: they never opened. Only doors you can click are used.
+- A switch or lever drawn at the foot of a wall could not be clicked on some levels. Only clickable ones are used.
+- Teleport traps could cut off part of a floor, sit beside a hidden stone, or lie on the only way to a lever. They now
+  only go where the floor has another way round, and never by anything you have to stand at.
+- Shortcut doors could be hung beside the gate, beside a hidden stone, or next to each other, sealing the way. Not any more.
+- Monsters could walk into the pit's rock on some levels (and the master with them). The rock holds them now, and a
+  level whose only creatures walk through walls gets no master (that floor is cleared instead).
+- Monsters spawned facing an impossible direction could crash the game while drawing.
+- On boss floors, opening the gate door by hand left the stairs shut after the master died.
+- Sigils held in the hand or worn now count. A floor whose puzzle cannot be furnished opens its gate and says so.
+- Floor five without a master still gives the Perfect Healing Potion for Timothy.
+
+### Items kept safe
+- Leaving the pit could damage your items: the borrowed level's monsters lost their loot, and the records were
+  reused for the pit's own things, so an item could end up in your pack and on a floor at once. The game no longer
+  reuses anything the party carries, a camp companion wears, or the borrowed level keeps.
+- Loading a save repairs items an older version listed twice, or left tagged to a floor while carried.
+
 ## 0.3.1
 
 - The character selection has its sound back, as in the original: the intro music, King Richard's greeting, each

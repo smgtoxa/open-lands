@@ -239,6 +239,17 @@ namespace Lol
             var used = new HashSet<int> { itemInHand };
             foreach (int it in inventory) if (it != 0) used.Add(it);
             foreach (var ch in characters) { if ((ch.flags & 1) == 0) continue; foreach (int it in ch.items) if (it != 0) used.Add(it); }
+            // Unity build: what only a record outside the map remembers is not free either - a companion waiting in the
+            // camp keeps their gear, and the level the Imp's Pit has borrowed keeps its floor's items until it is given back
+            foreach (var j in campReserve ?? new List<System.Text.Json.Nodes.JsonObject>())
+                if (j?["items"] is System.Text.Json.Nodes.JsonArray arr) foreach (var v in arr) { int it = Store_TruncOr0(Store_Number(v)); if (it > 0) used.Add(it); }
+            if (dungeon?.backup?.items != null) foreach (var rec in dungeon.backup.items) used.Add(rec.id);
+            foreach (var m in dungeon?.backup?.temp?.monsters ?? new Monster[0])
+            {
+                int a = m != null ? m.assignedItems : 0;
+                int guard = 0;
+                while (a != 0 && guard++ < 32) { used.Add(a); a = a < itemsInPlay.Length && itemsInPlay[a] != null ? itemsInPlay[a].nextAssignedObject : 0; }
+            }
             foreach (var m in monsters)
             {
                 int a = m != null ? m.assignedItems : 0;
@@ -264,11 +275,15 @@ namespace Lol
             int cnt = 0;
             int r = 0;
             int i = 1;
+            // what the party carries is never taken, whatever level tag a save from an older version left on it
+            var carried = new HashSet<int> { itemInHand };
+            foreach (int it in inventory) carried.Add(it);
+            foreach (var ch in characters) if ((ch.flags & 1) != 0) foreach (int it in ch.items) carried.Add(it);
             for (; i < 400; i += 1)
             {
                 var it = itemsInPlay[i];
                 if ((it.shpCurFrame_flg & 0x8000) != 0) { cnt = 0; break; }
-                if (it.level < 1 || it.level > 29 || it.level == currentLevel) continue;
+                if (it.level < 1 || it.level > 29 || it.level == currentLevel || carried.Contains(i)) continue;
                 int diff = Math.Abs(currentLevel - it.level);
                 if (diff <= cnt) continue;
                 bool t = false;

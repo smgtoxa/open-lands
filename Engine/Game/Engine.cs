@@ -552,7 +552,7 @@ namespace Lol
                 asyncQueue.RemoveAt(0);
                 try { await fn(); }
                 catch (QuitException) { throw; }
-                catch (Exception error) { log($"async task failed: {error.Message} {error.StackTrace?.Split('\n').FirstOrDefault()?.Trim()}"); }
+                catch (Exception error) { log($"async task failed: {error.Message} {string.Join(" < ", (error.StackTrace ?? "").Split('\n').Take(4).Select(l => l.Trim()))}"); }
             }
         }
 

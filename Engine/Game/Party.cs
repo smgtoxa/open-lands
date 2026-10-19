@@ -663,6 +663,9 @@ namespace Lol
 
         public int calcInflictableDamagePerItem(int attacker, int target, int itemMight, int index, int hitType)
         {
+            // no one to hit (a script aiming at the nearest hero when none is left): the original reads past its
+            // tables there and gets nothing useful either
+            if (target < 0 || ((target & 0x8000) == 0 && target >= 4) || ((target & 0x8000) != 0 && (target & 0x7fff) >= monsters.Length)) return 0;
             int dmg = attacker == -1 ? 0x100 : getCharacterOrMonsterStats(attacker)[1];
             var st = getCharacterOrMonsterProtectionAgainstItems(target);
             dmg = (dmg * itemMight) >> 8;

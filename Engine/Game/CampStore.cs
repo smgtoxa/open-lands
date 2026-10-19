@@ -145,6 +145,8 @@ namespace Lol
             if (v is JsonValue jv)
             {
                 if (jv.TryGetValue(out double d)) return d;
+                if (jv.TryGetValue(out int i)) return i;     // a value built in memory, not read from a file
+                if (jv.TryGetValue(out long l)) return l;
                 if (jv.TryGetValue(out bool b)) return b ? 1 : 0;
                 if (jv.TryGetValue(out string s))
                 {

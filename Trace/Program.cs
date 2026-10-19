@@ -26,57 +26,65 @@ var res = new Resources("", name =>
     if (!File.Exists(p)) throw new FileNotFoundException(name);
     return Task.FromResult(File.ReadAllBytes(p));
 });
-var engine = new LandsOfLore(res, sched, log: m => Console.WriteLine($"LOG {m}"));
-engine.randomSeed = seed;
-engine.presentationSeed = 1;
-engine.repairOnLoad = Environment.GetEnvironmentVariable("LOL_REPAIR") == "1";
-engine.companionsBench = engine.repairOnLoad;   // the page's load-time repairs (off for parity)
+LandsOfLore engine = null;
+int dice = 0;
+var pitEvents = new List<string>();
+var names = LandsOfLore.OPCODE_NAMES;
+LandsOfLore MakeEngine()
+{
+    var e = new LandsOfLore(res, sched, log: m => Console.WriteLine($"LOG {m}"));
+    e.randomSeed = seed;
+    e.presentationSeed = 1;
+    e.repairOnLoad = Environment.GetEnvironmentVariable("LOL_REPAIR") == "1";
+    e.companionsBench = e.repairOnLoad;   // the page's load-time repairs (off for parity)
+    e.ui = (name, args) =>
+    {
+        if (name == "pit") pitEvents.Add($"{args[0]}");
+        if (!traceUi) return;
+        if (name == "message") Console.WriteLine($"MSG {Clean(args[0])}");
+        else if (name == "dialogue") Console.WriteLine($"SAY {Clean(args[0])}");
+        else if (name == "miss") Console.WriteLine($"MISS {Field(args[0], "attacker")} -> {Field(args[0], "target")}");
+        else if (name == "damage")
+        {
+            int att = Convert.ToInt32(Field(args[0], "attacker"));
+            var am = (att & 0x8000) != 0 && (att & 0x7fff) < engine.monsters.Length ? engine.monsters[att & 0x7fff] : null;   // -1: a trap (JS reads past the array as undefined)
+            Console.WriteLine($"DAMAGE {(Field(args[0], "monster") != null ? "m" + Field(args[0], "monster") : "c" + Field(args[0], "character"))} {Field(args[0], "damage")} by {att}{(am != null ? $" (ps {am.pitScale} ng {am.ngplus})" : "")}");
+        }
+        else if (name == "kill") Console.WriteLine($"KILL m{Field(args[0], "monster")} by {Field(args[0], "attacker")}");
+    };
+    e.openTalkArchive = name =>
+    {
+        var p = Path.Combine(data, name);
+        return Task.FromResult<ITalkArchive>(File.Exists(p) ? new PakTalkArchive(new PakArchive(File.ReadAllBytes(p))) : null);
+    };
+    if (Environment.GetEnvironmentVariable("LOL_TRACE_TIMERS") == "1") e.traceTimer = (id, t) => Console.WriteLine($"  TIMER 0x{id:x} @{Math.Round(t / e.tickLength)}");
+    if (Environment.GetEnvironmentVariable("LOL_TRACE_DICE") == "1") e.traceDice = (t, p, i, r) => Console.WriteLine($"  DICE {t}d{p}+{i} -> {r}");
+    if (Environment.GetEnvironmentVariable("LOL_TRACE_DICE") == "1") e.traceRandom = r => Console.WriteLine($"  RND#{++dice} {r:0.#####} {Environment.StackTrace.Split('\n').Skip(3).Take(2).Select(l => l.Trim().Split(' ').ElementAtOrDefault(1)).Aggregate((a, b) => a + " < " + b)}");
+    if (traceOps)
+    {
+        e.traceLevelScript = (b, f) => Console.WriteLine($"runLevelScript({b}, 0x{f & 0xffff:x})");
+        var ops = e.opcodes;
+        for (int i = 0; i < ops.Length; i += 1)
+        {
+            var f = ops[i];
+            if (f == null) continue;
+            string name = i < names.Length && names[i] != "" ? names[i] : $"op{i}";
+            ops[i] = async st =>
+            {
+                int r = await f(st);
+                if (name != "updateBlockAnimations") Console.WriteLine($"  op {name}({st.arg(0)},{st.arg(1)},{st.arg(2)}) -> {r}");
+                return r;
+            };
+        }
+    }
+    return e;
+}
 static object Field(object o, string name) =>
     o is System.Collections.Generic.IDictionary<string, object> d ? (d.TryGetValue(name, out var v) ? v : null)
     : o?.GetType().GetProperty(name)?.GetValue(o) ?? o?.GetType().GetField(name)?.GetValue(o);
 static string Clean(object t) => System.Text.RegularExpressions.Regex.Replace(System.Text.RegularExpressions.Regex.Replace($"{t}", "[\x01-\x1f]", " "), "\\s+", " ").Trim();
-engine.ui = (name, args) =>
-{
-    if (!traceUi) return;
-    if (name == "message") Console.WriteLine($"MSG {Clean(args[0])}");
-    else if (name == "dialogue") Console.WriteLine($"SAY {Clean(args[0])}");
-    else if (name == "miss") Console.WriteLine($"MISS {Field(args[0], "attacker")} -> {Field(args[0], "target")}");
-    else if (name == "damage")
-    {
-        int att = Convert.ToInt32(Field(args[0], "attacker"));
-        var am = (att & 0x8000) != 0 && (att & 0x7fff) < engine.monsters.Length ? engine.monsters[att & 0x7fff] : null;   // -1: a trap (JS reads past the array as undefined)
-        Console.WriteLine($"DAMAGE {(Field(args[0], "monster") != null ? "m" + Field(args[0], "monster") : "c" + Field(args[0], "character"))} {Field(args[0], "damage")} by {att}{(am != null ? $" (ps {am.pitScale} ng {am.ngplus})" : "")}");
-    }
-    else if (name == "kill") Console.WriteLine($"KILL m{Field(args[0], "monster")} by {Field(args[0], "attacker")}");
-};
-engine.openTalkArchive = name =>
-{
-    var p = Path.Combine(data, name);
-    return Task.FromResult<ITalkArchive>(File.Exists(p) ? new PakTalkArchive(new PakArchive(File.ReadAllBytes(p))) : null);
-};
-var names = LandsOfLore.OPCODE_NAMES;
-if (Environment.GetEnvironmentVariable("LOL_TRACE_TIMERS") == "1") engine.traceTimer = (id, t) => Console.WriteLine($"  TIMER 0x{id:x} @{Math.Round(t / engine.tickLength)}");
 if (Environment.GetEnvironmentVariable("LOL_TRACE_SLEEP") == "1") sched.traceSleep = ms => { Console.WriteLine($"  SLEEP {ms:0.##} @{ticksRun} {string.Join(" < ", Environment.StackTrace.Split('\n').Select(l => l.Trim()).Where(l => l.StartsWith("at Lol.LandsOfLore.") || l.StartsWith("at Lol.Screen.")).Take(4).Select(l => l.Split(' ')[1].Replace("Lol.LandsOfLore.", "").Split('(')[0]))}"); };
-int dice = 0;
-if (Environment.GetEnvironmentVariable("LOL_TRACE_DICE") == "1") engine.traceDice = (t, p, i, r) => Console.WriteLine($"  DICE {t}d{p}+{i} -> {r}");
-if (Environment.GetEnvironmentVariable("LOL_TRACE_DICE") == "1") engine.traceRandom = r => Console.WriteLine($"  RND#{++dice} {r:0.#####} {Environment.StackTrace.Split('\n').Skip(3).Take(2).Select(l => l.Trim().Split(' ').ElementAtOrDefault(1)).Aggregate((a, b) => a + " < " + b)}");
-if (traceOps)
-{
-    engine.traceLevelScript = (b, f) => Console.WriteLine($"runLevelScript({b}, 0x{f & 0xffff:x})");
-    var ops = engine.opcodes;
-    for (int i = 0; i < ops.Length; i += 1)
-    {
-        var f = ops[i];
-        if (f == null) continue;
-        string name = i < names.Length && names[i] != "" ? names[i] : $"op{i}";
-        ops[i] = async st =>
-        {
-            int r = await f(st);
-            if (name != "updateBlockAnimations") Console.WriteLine($"  op {name}({st.arg(0)},{st.arg(1)},{st.arg(2)}) -> {r}");
-            return r;
-        };
-    }
-}
+engine = MakeEngine();
 
 void Run(int ticks)
 {
@@ -124,8 +132,9 @@ List<int> FindPath(int from, int to)
     for (int b = to; prev[b] != null; b = prev[b].Value.b) dirs.Insert(0, prev[b].Value.d);
     return dirs;
 }
-void PressKey(string key) { sched.Run(() => engine.events.Add(new InputEvent { type = "key", key = key })); Run(8); }
-void ClickAt(int x, int y) { sched.Run(() => { engine.pushMouse(x, y, 1); engine.events.Add(new InputEvent { type = "mouseup", x = x, y = y, button = 1 }); }); Run(8); }
+// the game handles one input per main-loop pass (as the original): wait until this one has been taken
+void PressKey(string key) { sched.Run(() => engine.events.Add(new InputEvent { type = "key", key = key })); Run(8); for (int i = 0; i < 300 && engine.events.Count > 0; i += 1) Run(1); }
+void ClickAt(int x, int y) { sched.Run(() => { engine.pushMouse(x, y, 1); engine.events.Add(new InputEvent { type = "mouseup", x = x, y = y, button = 1 }); }); Run(8); for (int i = 0; i < 300 && engine.events.Count > 0; i += 1) Run(1); }
 bool WaitIdle(int max = 300)
 {
     for (int i = 0; i < max; i += 1)
@@ -150,6 +159,7 @@ string PressAhead()
         ClickAt(x, y);
         return $"{x}x{y}";
     }
+    Console.WriteLine($"  press: no decoration on wall {wall} (shape {engine.wllShapeMap[wall]}): clicking 200x60");
     ClickAt(200, 60);
     return "200x60";
 }
@@ -281,6 +291,344 @@ bool GotoBlock(int target, bool fight = false)
         }
     }
     return engine.currentBlock == target;
+}
+
+// ---- The Imp's Pit, played to the end: a floor that cannot be finished is a bug ----
+// The solver walks, turns, clicks and picks up through the game's own input, as the bot below does; only the
+// fighting is cut short (a monster in reach dies at once): the question is whether a floor can be finished,
+// not whether this party survives it.
+bool pitTick = false;
+// in the pit test the heroes cannot die: whether a floor can be finished is the question, not whether this party lives
+void Tick(int ticks)
+{
+    for (int i = 0; i < ticks; i += 1)
+    {
+        Run(1);
+        if (!pitTick || engine.dungeon == null) continue;
+        foreach (var c in engine.characters) if ((c.flags & 1) != 0) { c.hitPointsMax = Math.Max(c.hitPointsMax, 30000); c.hitPointsCur = c.hitPointsMax; }
+        sched.Run(() => engine.uiDungeonTick());
+    }
+}
+string pitWhy = null;
+int[] STEPS = { -32, 1, 32, -1 };
+PitSecret ToldSecretAt(int b) => engine.dungeon?.secrets?.FirstOrDefault(x => x.block == b && x.told && !x.open);
+List<int> PitPath(int from, int to, bool secrets = false)
+{
+    var traps = new HashSet<int>((engine.dungeon?.traps ?? new List<PitTrap>()).Where(t => t.kind == "teleport").Select(t => t.block));
+    var prev = new Dictionary<int, (int b, int d)?> { [from] = null };
+    var queue = new Queue<int>();
+    queue.Enqueue(from);
+    while (queue.Count > 0)
+    {
+        int b = queue.Dequeue();
+        if (b == to) break;
+        if (b != from && traps.Contains(b)) continue;
+        for (int d = 0; d < 4; d += 1)
+        {
+            if (!engine.uiPitPassable(b, d) && !(secrets && ToldSecretAt(b + STEPS[d]) != null)) continue;
+            int n = b + STEPS[d];
+            if (prev.ContainsKey(n)) continue;
+            prev[n] = (b, d);
+            queue.Enqueue(n);
+        }
+    }
+    if (!prev.ContainsKey(to)) return null;
+    var dirs = new List<int>();
+    for (int b = to; prev[b] != null; b = prev[b].Value.b) dirs.Insert(0, prev[b].Value.d);
+    return dirs;
+}
+bool Hostile(Monster m) => m.properties != null && m.hitPoints > 0 && m.mode < 13 && m.block != 0;
+int PitKillNear()
+{
+    var near = engine.monsters.Where(m => Hostile(m) && engine.getBlockDistance(engine.currentBlock, m.block) <= 1).ToList();
+    if (near.Count == 0) return 0;
+    sched.Run(() => engine.queueAsync(async () => { foreach (var m in near) if (m.hitPoints > 0) { m.hitPoints = 0; engine.killMonster(m); } await Task.CompletedTask; }));
+    Tick(12);
+    return near.Count;
+}
+void PitFace(int d)
+{
+    for (int i = 0; i < 4 && engine.currentDirection != d; i += 1)
+    {
+        WaitIdle();
+        PressKey(((d - engine.currentDirection + 4) & 3) == 3 ? "q" : "e");
+        WaitIdle();
+    }
+}
+bool PitGoto(int target)
+{
+    int stuck = 0;
+    for (int attempt = 0; attempt < 600; attempt += 1)
+    {
+        if (engine.currentBlock == target) return true;
+        HarnessHeal("pit", true);
+        PitKillNear();
+        WaitIdle();
+        var dirs = PitPath(engine.currentBlock, target) ?? PitPath(engine.currentBlock, target, true);
+        if (dirs == null) { pitWhy = $"no way from {engine.currentBlock} to {target}"; return false; }
+        int d = dirs[0];
+        PitFace(d);
+        if (engine.currentDirection != d) continue;
+        if (ToldSecretAt(engine.currentBlock + STEPS[d]) != null) { ClickAt(200, 50); Tick(10); WaitIdle(); }   // the marked stone slides away
+        if (!OpenDoorAhead())
+        {
+            int db = engine.currentBlock + STEPS[d];
+            int w = engine.levelBlockProperties[db].walls[d ^ 2];
+            pitWhy = $"the door ahead of {engine.currentBlock} (facing {d}) did not open: wall {w} flags 0x{engine.wllWallFlags[w]:x} type {engine.specialWallTypes[w]} shape {engine.wllShapeMap[w]} walls [{string.Join(",", engine.levelBlockProperties[db].walls)}] objects 0x{engine.levelBlockProperties[db].assignedObjects:x}";
+            if (++stuck > 6) return false;
+            continue;
+        }
+        int before = engine.currentBlock;
+        if (Environment.GetEnvironmentVariable("LOL_PITSTEP") == "1") Console.WriteLine($"  step {before} -> {before + STEPS[d]} (dir {d}) walls [{string.Join(",", engine.levelBlockProperties[before + STEPS[d]].walls)}] objects 0x{engine.levelBlockProperties[before + STEPS[d]].assignedObjects:x} flags {engine.updateFlags} restore {engine.needSceneRestore}");
+        PressKey("w");
+        WaitIdle();
+        for (int i = 0; i < 150 && engine.currentBlock == before; i += 1) Tick(1);
+        if (engine.currentBlock == before)
+        {
+            PitKillNear();
+            if (++stuck > 12) { pitWhy = $"stuck at {before} facing {engine.currentDirection} on the way to {target}"; return false; }
+            Tick(30);
+        }
+    }
+    pitWhy = $"never got from {engine.currentBlock} to {target}";
+    return engine.currentBlock == target;
+}
+// stand where a wall's face is worked from: `block` is the wall's block, `face` the face the party looks at
+bool PitStandAt(int block, int face)
+{
+    int stand = block + STEPS[face];
+    if (!PitGoto(stand)) return false;
+    PitFace(face ^ 2);
+    return engine.currentDirection == (face ^ 2);
+}
+// The floor, drawn: # rock, . open, D door, G gate, @ party, > stairs, L lever (l pulled), S switch, ? sliding stone,
+// T teleport, k key, s sigil, i item, m monster, B master
+void PitMap(string why)
+{
+    if (Environment.GetEnvironmentVariable("LOL_PITMAP") != "1") return;
+    var d = engine.dungeon;
+    if (d == null) return;
+    var r = d.plan.rect;
+    var marks = new Dictionary<int, char>();
+    foreach (var l in d.levers ?? new List<DungeonLever>()) marks[l.block] = l.pulled ? 'l' : 'L';
+    if (d.switchWall != null) marks[d.switchWall.block] = 'S';
+    foreach (var x in d.secrets) if (!x.open) marks[x.block] = '?';
+    foreach (var t in d.traps) marks[t.block] = t.kind == "teleport" ? 'T' : 't';
+    foreach (var x in d.doors) marks[x.block] = 'D';
+    if (d.gate != null) marks[d.gate.block] = d.gate.open ? 'g' : 'G';
+    foreach (int it in d.madeItems) if (engine.itemsInPlay[it].block != 0) marks[engine.itemsInPlay[it].block] = engine.uiExtraItem(it)?.id == "pitkey" ? 'k' : engine.uiExtraItem(it)?.id == "sigil" ? 's' : 'i';
+    foreach (var m in engine.monsters) if (m.properties != null && m.hitPoints > 0 && m.block != 0) marks[m.block] = m.dungeonBoss != 0 ? 'B' : 'm';
+    marks[d.stairs] = '>';
+    marks[engine.currentBlock] = '@';
+    var reach = engine.uiPitReach(engine.currentBlock);   // drawn as ',' where the party can walk to now
+    foreach (var bm in engine.monsters.Where(m => m.dungeonBoss != 0 && m.hitPoints > 0)) Console.WriteLine($"  master t{bm.type} b{bm.block} xy {bm.x},{bm.y} mode {bm.mode} pflags 0x{bm.properties.flags:x} width {bm.properties.maxWidth} rock {engine.uiDungeonRockWall()} rockflags 0x{engine.wllWallFlags[engine.uiDungeonRockWall()]:x} wall@b [{string.Join(",", engine.levelBlockProperties[bm.block].walls)}]");
+    Console.WriteLine($"  map ({why}) start {d.plan.start} stairs {d.stairs} gate {d.gate?.block} party {engine.currentBlock} facing {engine.currentDirection}");
+    for (int y = r.y - 1; y <= r.y + r.h; y += 1)
+    {
+        var row = new System.Text.StringBuilder("  ");
+        for (int x = r.x - 1; x <= r.x + r.w; x += 1)
+        {
+            int b = (y << 5) + x;
+            if (marks.TryGetValue(b, out char c)) row.Append(c);
+            else row.Append(engine.levelBlockProperties[b].walls.All(w => w == 0) ? (reach.Contains(b) ? ',' : '.') : '#');
+        }
+        Console.WriteLine(row.ToString());
+    }
+}
+// stand next to `block` on the side the party can reach, facing it
+bool PitStandBy(int block)
+{
+    var reach = engine.uiPitReach(engine.currentBlock);
+    for (int d = 0; d < 4; d += 1)
+    {
+        int stand = block + STEPS[d];
+        if (!reach.Contains(stand)) continue;
+        if (!PitGoto(stand)) return false;
+        PitFace(d ^ 2);
+        return engine.currentDirection == (d ^ 2);
+    }
+    pitWhy = $"nowhere to stand by {block}";
+    return false;
+}
+List<int> PitItems(string id) => engine.dungeon.madeItems.Where(it => engine.itemsInPlay[it].itemPropertyIndex != 0 && engine.uiExtraItem(it)?.id == id && engine.itemsInPlay[it].block != 0
+    && !engine.inventory.Contains((ushort)it) && engine.itemInHand != it).ToList();
+bool PitTake(int item)
+{
+    int block = engine.itemsInPlay[item].block;
+    if (!PitGoto(block)) return false;
+    WaitIdle();
+    // a full pack: the party drops something it can spare, as a player would
+    if (engine.itemInHand != 0 || Array.IndexOf(engine.inventory, (ushort)0) < 0)
+        sched.Run(() => engine.queueAsync(async () =>
+        {
+            if (engine.itemInHand != 0 && engine.uiExtraItem(engine.itemInHand)?.id != "sigil" && engine.uiExtraItem(engine.itemInHand)?.id != "pitkey") { int h = engine.itemInHand; await engine.setHandItem(0); engine.deleteItem(h); }
+            int spare = Array.FindIndex(engine.inventory, it => it != 0 && engine.uiExtraItem(it)?.id != "sigil" && engine.uiExtraItem(it)?.id != "pitkey");
+            if (Array.IndexOf(engine.inventory, (ushort)0) < 0 && spare >= 0) { engine.deleteItem(engine.inventory[spare]); engine.inventory[spare] = 0; }
+        }));
+    Tick(6);
+    int got = -1;
+    sched.Run(() => engine.queueAsync(async () => { got = await engine.uiTakeFloorItem(item, block); }));
+    Tick(20);
+    if (got != 1) { pitWhy = $"could not take the {engine.uiExtraItem(item)?.id} at {block}: floor [{string.Join(",", engine.uiFloorItems().Select(f => f.item + "@" + f.block))}] hand {engine.itemInHand} flags {engine.updateFlags} restore {engine.needSceneRestore} paused {engine.sysTimerPaused} item block {engine.itemsInPlay[item].block} level {engine.itemsInPlay[item].level} h {engine.itemsInPlay[item].flyingHeight}"; return false; }
+    return true;
+}
+void PitSaveLoad()
+{
+    var bad = PackCheck("before the save");
+    if (bad != null) Console.WriteLine("  " + bad);
+    var st = engine.saveState();
+    var old = engine;
+    old.quit = true;
+    Run(20);
+    engine = MakeEngine();
+    engine.playIntro = false;
+    sched.Start(() => engine.resumeGame(st));
+    Run(120);
+    WaitIdle();
+    var bad2 = PackCheck("after the load");
+    if (bad2 != null) Console.WriteLine("  " + bad2);
+    if (Environment.GetEnvironmentVariable("LOL_PITSTEP") == "1") Console.WriteLine($"  reload: saved dungeon level {st["dungeon"]?["level"]} stairs {st["dungeon"]?["stairs"]} -> loaded level {engine.dungeon?.level} stairs {engine.dungeon?.stairs} objective {engine.dungeon?.objective} at L{engine.currentLevel} b{engine.currentBlock}");
+}
+// Plays the floor the party stands on: its puzzle, then the way down. Null when the party stood on the stairs with
+// the way open; else what went wrong.
+string PitSolve(bool saveLoad)
+{
+    pitWhy = null;
+    var d = engine.dungeon;
+    for (int i = 0; i < 200 && !d.ready; i += 1) Tick(1);
+    if (!d.ready) return "the floor never became ready";
+    string obj = d.objective;
+    bool saved = false;
+    void Halfway() { if (saveLoad && !saved) { saved = true; PitSaveLoad(); d = engine.dungeon; } }
+    switch (obj)
+    {
+        case "levers":
+            if (d.levers.Count == 0) return "a lever floor without levers";
+            for (int i = 0; i < d.levers.Count; i += 1)
+            {
+                var lever = engine.dungeon.levers[i];
+                if (lever.pulled) continue;
+                if (!PitStandAt(lever.block, lever.dir)) return $"lever {i + 1}/{d.levers.Count}: {pitWhy}";
+                PressAhead(); Tick(30); WaitIdle();
+                if (!engine.dungeon.levers[i].pulled) return $"lever {i + 1}/{d.levers.Count} at {lever.block} did not move";
+                Halfway();
+            }
+            break;
+        case "switch":
+        {
+            var sw = d.switchWall;
+            if (sw == null) return "a switch floor without a switch";
+            Halfway();
+            if (!PitStandAt(sw.block, sw.dir)) return $"switch: {pitWhy}";
+            string at = PressAhead(); Tick(30); WaitIdle();
+            if (!engine.dungeon.switchWall.pressed) return $"the switch at {sw.block} did not give (clicked {at}, wall {engine.levelBlockProperties[sw.block].walls[sw.dir]} type {engine.specialWallTypes[engine.levelBlockProperties[sw.block].walls[sw.dir]]})";
+            break;
+        }
+        case "key":
+        {
+            var keys = PitItems("pitkey");
+            if (keys.Count == 0 && engine.dungeon.gate != null && !engine.dungeon.gate.open) return $"no key on the floor: made [{string.Join(",", engine.dungeon.madeItems.Select(it => $"{it}:p{engine.itemsInPlay[it].itemPropertyIndex}:{engine.uiExtraItem(it)?.id}:b{engine.itemsInPlay[it].block}"))}] pitkey prop {engine.pitProp("pitkey")} pack [{string.Join(",", engine.inventory.Select(x => (int)x))}] hand {engine.itemInHand}";
+            if (keys.Count != 0)
+            {
+                if (!PitTake(keys[0])) return $"key: {pitWhy}";
+                Halfway();
+                if (Array.FindIndex(engine.inventory, it => it != 0 && engine.uiExtraItem(it)?.id == "pitkey") < 0) return "the key is not in the pack after taking it";
+                if (!PitStandBy(engine.dungeon.gate.block)) return $"key gate: {pitWhy}";
+                if (engine.dungeon.gate.door) PressAhead(); else ClickAt(200, 50);   // a door by its switch; a sealed wall anywhere
+                Tick(30); WaitIdle();
+            }
+            break;
+        }
+        case "sigils":
+        {
+            var sigils = PitItems("sigil");
+            if (sigils.Count < d.need) return $"{sigils.Count} sigils lie on the floor, {d.need} are asked for";
+            foreach (int it in sigils) { if (!PitTake(it)) return $"sigil: {pitWhy}"; Halfway(); }
+            Tick(10);
+            break;
+        }
+        case "clear":
+            for (int round = 0; round < 60; round += 1)
+            {
+                var reach = engine.uiPitReach(engine.dungeon.plan.start);
+                var foes = engine.monsters.Where(m => Hostile(m) && reach.Contains(m.block)).OrderBy(m => engine.getBlockDistance(engine.currentBlock, m.block)).ToList();
+                if (foes.Count == 0) break;
+                var m = foes[0];
+                if (!PitStandBy(m.block) && engine.getBlockDistance(engine.currentBlock, m.block) > 1) { if (m.hitPoints > 0 && Hostile(m)) return $"clear: {pitWhy}"; }
+                PitKillNear();
+                if (round == 1) Halfway();
+            }
+            Tick(10);
+            break;
+        case "boss":
+        {
+            Halfway();
+            for (int round = 0; round < 10; round += 1)
+            {
+                var boss = engine.monsters.FirstOrDefault(m => m.dungeonBoss != 0 && m.hitPoints > 0 && m.block != 0);
+                if (boss == null) break;
+                if (!PitStandBy(boss.block) && engine.getBlockDistance(engine.currentBlock, boss.block) > 1) return $"boss: {pitWhy}";
+                PitKillNear();
+            }
+            break;
+        }
+        default: return $"unknown objective {obj}";
+    }
+    d = engine.dungeon;
+    if (d.gate != null && !d.gate.open && d.gate.locked) return $"{obj}: the gate stayed shut after the puzzle";
+    if (engine.currentBlock == d.stairs)   // standing on them already: step off, and on again
+    {
+        for (int dir = 0; dir < 4; dir += 1) if (engine.uiPitPassable(d.stairs, dir)) { PitGoto(d.stairs + STEPS[dir]); break; }
+    }
+    pitEvents.Clear();
+    if (!PitGoto(d.stairs)) return $"stairs: {pitWhy}";
+    for (int i = 0; i < 200 && !pitEvents.Contains("stairs"); i += 1) Tick(1);   // said once the step has played out
+    string blocked = engine.uiDungeonStairsBlocked();
+    if (blocked != null) return $"on the stairs: {blocked}";
+    if (!pitEvents.Contains("stairs")) return "the stairs did not say so";
+    return null;
+}
+async Task PitEnter(FloorPlan plan, bool descend)
+{
+    if (descend) await engine.uiDungeonDescend(plan);
+    else await engine.uiDungeonEnter(plan);
+    if (engine.dungeon != null) await engine.uiDungeonSetup(plan);
+}
+int pitOk = 0, pitFail = 0;
+// the pack must hold each item once, and only items that are records of something carried (not lying anywhere)
+HashSet<int> packBaseline = null;   // what the save was already carrying wrong (an older version's doing)
+string PackCheck(string when)
+{
+    var seen = new HashSet<int>();
+    foreach (int it in engine.inventory)
+    {
+        if (it == 0 || (packBaseline != null && packBaseline.Contains(it))) continue;
+        if (!seen.Add(it)) return $"{when}: item {it} twice in the pack";
+        var rec = engine.itemsInPlay[it];
+        if (rec.itemPropertyIndex == 0) return $"{when}: pack holds deleted item {it}";
+        if (rec.block != 0) return $"{when}: pack item {it} ({engine.itemName(it)}) also lies on block {rec.block}";
+    }
+    return null;
+}
+void PitCase(FloorPlan plan, bool descend, bool saveLoad)
+{
+    pitTick = true;
+    foreach (var c in engine.characters) if ((c.flags & 1) != 0) { c.hitPointsMax = Math.Max(c.hitPointsMax, 30000); c.hitPointsCur = c.hitPointsMax; }
+    long t0 = ticksRun;
+    sched.Run(() => engine.queueAsync(() => PitEnter(plan, descend)));
+    Tick(60);
+    WaitIdle();
+    string why = PackCheck("before the floor") ?? (engine.dungeon == null ? "could not enter" : PitSolve(saveLoad)) ?? PackCheck("after the floor");
+    string what = engine.dungeon != null ? engine.dungeon.objective : plan.objective;
+    if (why == null) pitOk += 1; else { pitFail += 1; PitMap(why); Console.WriteLine($"  state: flags {engine.updateFlags} weaponsDisabled {engine.weaponsDisabled} paused {engine.sysTimerPaused} restore {engine.needSceneRestore} hand {engine.itemInHand} flying [{string.Join(" ", engine.flyingObjects.Where(f => f.enable != 0).Select(f => $"{f.item}:{f.attackerId}@{f.x},{f.y}"))}] events {engine.events.Count} party hp [{string.Join(",", engine.characters.Where(c => (c.flags & 1) != 0).Select(c => c.hitPointsCur + "/" + c.flags.ToString("x")))}]"); }
+    Console.WriteLine($"PIT L{plan.level} D{plan.depth} {plan.seed} {plan.objective}->{what} {(why == null ? "OK" : "FAIL " + why)} ({(ticksRun - t0) / 60}s)");
+}
+void PitLeave()
+{
+    if (engine.dungeon == null) return;
+    sched.Run(() => engine.queueAsync(async () => { await engine.uiDungeonLeave(); }));
+    Tick(60);
+    WaitIdle();
 }
 
 sched.Run(() => sched.Observe(engine.preInit()));
@@ -519,6 +867,58 @@ foreach (var step in (args.Length > 0 ? args[0] : "new:0,wait:2,state").Split(',
             var inv = engine.inventory.Select((it, i) => it != 0 ? $"{i}:{name(it)}" : null).Where(x => x != null);
             var worn = engine.characters.Where(c => (c.flags & 1) != 0).Select(c => $"{c.name}[{string.Join(" ", c.items.Select(it => it != 0 ? name(it) : "-"))}]");
             Console.WriteLine($"items hand {(engine.itemInHand != 0 ? name(engine.itemInHand) : "-")} | {string.Join(" ", inv)} | {string.Join(" ", worn)} | crowns {engine.credits}");
+            break;
+        }
+        // pittest:L1-L2:D1-D2:DSTEP:SEEDS:SAVE - every objective on every borrowed level and depth, each floor entered
+        // from outside, solved and left. pitchain:D1-D2:SAVE - the run as the page plays it: floor after floor down.
+        // dupcheck - items listed in two places at once (pack twice, pack and worn, pack and a floor)
+        case "dupcheck":
+        {
+            var where = new Dictionary<int, List<string>>();
+            void Add(int it, string w) { if (it == 0) return; if (!where.TryGetValue(it, out var l)) where[it] = l = new List<string>(); l.Add(w); }
+            for (int i = 0; i < engine.inventory.Length; i += 1) Add(engine.inventory[i], $"pack{i}");
+            foreach (var c in engine.characters) if ((c.flags & 1) != 0) for (int i = 0; i < c.items.Length; i += 1) Add(c.items[i], $"{c.name}{i}");
+            Add(engine.itemInHand, "hand");
+            foreach (var kv in where) if (kv.Value.Count > 1 || engine.itemsInPlay[kv.Key].block != 0) Console.WriteLine($"dup item {kv.Key} {engine.itemName(kv.Key)} at {string.Join(",", kv.Value)} block {engine.itemsInPlay[kv.Key].block} level {engine.itemsInPlay[kv.Key].level}");
+            break;
+        }
+        case "pittest":
+        {
+            var a = arg.Split(':');
+            int[] R(string x) { var p = x.Split('-').Select(int.Parse).ToArray(); return p.Length == 1 ? new[] { p[0], p[0] } : p; }
+            var lv = R(a[0]); var dp = R(a[1]); int dstep = int.Parse(a[2]); int seeds = int.Parse(a[3]); bool sl = a.Length > 4 && a[4] == "1";
+            string[] objs = a.Length > 5 ? a[5].Split('+') : new[] { "levers", "switch", "key", "sigils", "clear", "boss" };
+            PitLeave();   // a save made inside a floor comes back inside it
+            packBaseline = new HashSet<int>(engine.inventory.Select(x => (int)x).GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key));
+            for (int l = lv[0]; l <= lv[1]; l += 1)
+                for (int depth = dp[0]; depth <= dp[1]; depth += dstep)
+                    for (int k = 0; k < seeds; k += 1)
+                        foreach (var o2 in objs)
+                        {
+                            if (l == engine.currentLevel) continue;
+                            var plan = new FloorPlan { floor = depth, depth = depth, level = l, objective = o2, need = LandsOfLore.objectiveNeed(o2, depth), seed = $"t:{l}:{depth}:{k}:{o2}", cells = LandsOfLore.floorCells(depth) };
+                            PitCase(plan, false, sl && k % 2 == 1);
+                            PitLeave();
+                        }
+            Console.WriteLine($"PIT TOTAL ok {pitOk} fail {pitFail}");
+            break;
+        }
+        case "pitchain":
+        {
+            var a = arg.Split(':');
+            var dp = a[0].Split('-').Select(int.Parse).ToArray();
+            int saveEvery = a.Length > 1 ? int.Parse(a[1]) : 0;
+            var visited = Enumerable.Range(1, 29).ToList();
+            PitLeave();
+            packBaseline = new HashSet<int>(engine.inventory.Select(x => (int)x).GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key));
+            for (int depth = dp[0]; depth <= dp[1]; depth += 1)
+            {
+                var plan = LandsOfLore.floorPlan(depth, visited, engine.currentLevel);
+                if (plan == null) { Console.WriteLine($"PIT D{depth} no plan"); break; }
+                PitCase(plan, engine.dungeon != null, saveEvery > 0 && depth % saveEvery == 0);
+            }
+            PitLeave();
+            Console.WriteLine($"PIT TOTAL ok {pitOk} fail {pitFail}");
             break;
         }
         default: Console.WriteLine($"unknown step {step}"); break;

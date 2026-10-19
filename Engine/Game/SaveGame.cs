@@ -440,6 +440,17 @@ namespace Lol
             this.credits = 0;
             await giveCredits(credits, 0);
             await setHandItem(itemInHand);
+            // One item, one place. Older versions could leave the same item listed twice (in the pack twice, or in the
+            // pack and in a hero's hands): what a hero wears stays, the pack's extra mention of it goes.
+            var listed = new HashSet<int> { itemInHand };
+            foreach (var ch in characters) if ((ch.flags & 1) != 0) for (int i = 0; i < ch.items.Length; i += 1) if (ch.items[i] != 0 && !listed.Add(ch.items[i])) ch.items[i] = 0;
+            for (int i = 0; i < inventory.Length; i += 1) if (inventory[i] != 0 && !listed.Add(inventory[i])) inventory[i] = 0;
+            // A carried item lies nowhere: saves from before 0.3 could leave a level tag on one, which made the level
+            // load lay it on its floor as well (one item in two places)
+            var carriedNow = new HashSet<int> { itemInHand };
+            foreach (int it in inventory) carriedNow.Add(it);
+            foreach (var ch in characters) if ((ch.flags & 1) != 0) foreach (int it in ch.items) carriedNow.Add(it);
+            foreach (int it in carriedNow) if (it > 0 && it < itemsInPlay.Length && itemsInPlay[it] != null && itemsInPlay[it].level != 0) { itemsInPlay[it].level = 0; itemsInPlay[it].block = 0; }
             curTlkFile = -1;
             await loadLevel(currentLevel);
             flagsTable[73] |= 0x08;   // as the original sets after loading

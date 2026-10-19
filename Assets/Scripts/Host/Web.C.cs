@@ -267,18 +267,12 @@ namespace LolHost
         string dungeonKey = "";
         PitRun dungeonRun = null; // { floor, objective, need, seed, finishing }
 
-        int? sigilProperty()
-        {
-            var props = CraftingUi.registerPotions(engine);
-            return PropOf(props, "sigil");
-        }
 
         PitInfo dungeonState()
         {
             if (engine == null || !engine.uiInDungeon()) return null;
             var info = new PitInfo(engine.uiDungeonInfo());
-            var prop = sigilProperty();
-            info.sigils = prop == null ? 0 : engine.uiCountOfProperty(prop.Value);
+            info.sigils = engine.uiPitSigils();
             // Where the floor's own things are, so the line under the map can point at them.
             var d = engine.dungeon;
             info.vaultWhere = d.vault != null ? engine.uiDungeonBearing(d.vault.block) : "";
@@ -335,45 +329,21 @@ namespace LolHost
             var d = engine.dungeon;
             if (d == null) return;
             dungeonRun = new PitRun { floor = plan.floor, seed = plan.seed, finishing = false };
-            string objective = d.objective;   // the engine may have swapped a puzzle this level cannot furnish
-            d.sigilsBefore = sigilProperty() == null ? 0 : engine.uiCountOfProperty(sigilProperty().Value);
-            int placed = engine.uiDungeonPopulate(LandsOfLore.monsterCount(plan.depth), plan.depth, plan.seed);
-            if (objective == "boss" && engine.uiDungeonBoss(plan.depth, plan.seed) < 0)
-            {
-                objective = "clear";   // nothing of this level would stand as a master
-                engine.uiDungeonOpenGate(null);
-            }
-            if (objective == "clear" && placed == 0) { objective = "switch"; }
-            d.objective = objective;
-            var props = CraftingUi.registerPotions(engine);
-            var spots = d.spots.Count != 0 ? d.spots.ToList() : d.plan.deadEnds.Where(b => !d.plan.regionB.Contains(b)).ToList();
-            int nextSpot = 0;
-            if (objective == "sigils")
-            {
-                // never more than the floor has hiding places for
-                d.need = Math.Max(1, Math.Min(plan.need, spots.Count));
-                int put = 0;
-                for (int i = 0; i < d.need; i += 1) if (await engine.uiDungeonPlaceItem(sigilProperty(), At(spots, nextSpot++)) != 0) put += 1;
-                d.need = Math.Max(1, Math.Min(d.need, put));
-            }
-            else d.need = 1;
-            if (objective == "key") await engine.uiDungeonPlaceItem(PropOf(props, "pitkey"), At(spots, nextSpot++));
-            // something worth the search in the hiding places left, more of it deeper down
-            var loot = new[] { PropOf(props, "heal"), PropOf(props, "mana"), PropOf(props, "antidote"), PropOf(props, "strength"), PropOf(props, "agility"), PropOf(props, "arcane") }.Where(x => x != null).ToList();
-            for (int i = 0; i < 1 + plan.depth / 3 && loot.Count != 0 && nextSpot < spots.Count + 2; i += 1)
-                await engine.uiDungeonPlaceItem(loot[(i + plan.depth) % loot.Count], At(spots, nextSpot++));
-            // Only now may the floor be finished: until everything is in place a poll would see an empty floor.
-            d.ready = true;
+            var setup = await engine.uiDungeonSetup(plan);
+            if (setup == null) return;
+            string objective = setup.objective;
+            int placed = setup.placed;
             dungeonKey = "";
             string label = DungeonRun.OBJECTIVES.FirstOrDefault(o => o.id == objective)?.label ?? "Survive";
             gameUi.message(first ? $"The floor closes over you. Floor {plan.floor} of the imp's pit: {label.ToLowerInvariant()}." : $"Down the stairs to floor {plan.floor}: {label.ToLowerInvariant()}.", "system");
-            gameUi.message(objective switch
+            bool gateOpen = d.gate == null || d.gate.open;   // a floor that could not furnish its puzzle has said so already
+            if (!gateOpen || objective == "boss") gameUi.message(objective switch
             {
                 "levers" => $"A gate bars the way down. Somewhere on this floor {d.levers.Count} levers hold it shut.",
                 "switch" => "A gate bars the way down. Somewhere a loose stone works it: try the dead ends.",
                 "key" => "A locked gate bars the way down. Its key is hidden on this floor.",
                 "sigils" => $"A gate bars the way down. It opens for {d.need} of the imp's sigils.",
-                "clear" => $"A gate bars the way down, sealed until the last of the {placed} down here falls.",
+                "clear" => $"A gate bars the way down, sealed until the last of the {engine.uiDungeonFoesLeft()} on this side falls.",
                 "boss" => "The floor's master waits by the way down. Kill it, or you go no further.",
                 _ => $"{placed} of them are down here with you.",
             }, "system");
@@ -390,9 +360,8 @@ namespace LolHost
             if (engine == null || !engine.uiInDungeon() || dungeonRun == null) return;
             var info = dungeonState();
             if (info == null || !info.ready || legacyObjective(info.objective)) return;
-            if (!info.gateOpen) return;
-            if (info.objective == "boss" && info.bossAlive) { gameUi.message("The way down is here, but the floor's master still walks. It will not let you pass.", "system"); return; }
-            if (info.objective == "clear" && info.monstersLeft > 0) return;
+            string blocked = engine.uiDungeonStairsBlocked();
+            if (blocked != null) { if (blocked.Length != 0) gameUi.message(blocked, "system"); return; }
             int floor = dungeonRun.floor;
             if (!engine.dungeon.floorDone)
             {
@@ -405,6 +374,18 @@ namespace LolHost
                 record.best[fk] = (record.best[fk] is JsonValue bv && bv.TryGetValue(out double bd) ? bd : 0) + 1;
                 DungeonRun.writeRun(record);
                 gameUi.message($"Floor {floor} is beaten. The imp pays up: {string.Join(", ", got)}.", "system");
+                // floor five without a master (its level keeps nothing that would stand as one): the flask that can
+                // save Timothy is still to be had here, lying where the way down begins
+                if (floor == 5 && engine.uiPerfectPotionWanted() && !engine.monsters.Any(m => m.dungeonBoss != 0)
+                    && !engine.dungeon.madeItems.Any(it => engine.uiExtraItem(it)?.id == "perfectheal"))
+                {
+                    var prop = PropOf(CraftingUi.registerPotions(engine), "perfectheal");
+                    int block = engine.currentBlock;
+                    engine.queueAsync(async () =>
+                    {
+                        if (await engine.uiDungeonPlaceItem(prop, block) != 0) gameUi.message("Something glints at your feet: a glowing flask, a Perfect Healing Potion.", "note");
+                    });
+                }
                 toast($"Floor {floor} beaten", "fx-toast-ach");
                 inventoryKey = ""; impKey = ""; sidebarKey = "";
                 checkAchievements();
@@ -519,10 +500,7 @@ namespace LolHost
             }
             if (legacyObjective(info.objective)) { if (done && info.ready) finishDungeon(); return; }
             if (!info.ready) return;
-            engine.uiDungeonBossTick();
-            // the puzzles the host keeps the score of: the floor's monsters, the imp's sigils
-            if (!info.gateOpen && info.objective == "clear" && info.monstersLeft == 0) engine.uiDungeonOpenGate("The last of them falls. Far off, a gate grinds open.");
-            if (!info.gateOpen && info.objective == "sigils" && info.sigils - info.sigilsBefore >= info.need) engine.uiDungeonOpenGate("The sigils grow warm in your pack. Far off, a gate grinds open.");
+            engine.uiDungeonTick();   // the master's rage; the floor's monsters and the imp's sigils opening the gate
             if (info.objective == "boss" && !info.bossAlive && !pitBossToldDead)
             {
                 pitBossToldDead = true;

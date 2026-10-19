@@ -1172,6 +1172,7 @@ namespace LolHost
             var resources = new Lol.Resources(dataRoot, fetchBytes);
             engine = new LandsOfLore(resources, sched, log, presentEngine); engine.repairOnLoad = true; engine.companionsBench = true;
             engine.audioHost = audio;
+            engine.pitItemDefs = ErrandItems.ERRAND_ITEMS.Concat(ErrandItems.DUNGEON_ITEMS).ToList();   // the same list the page registers, art and all
             // window.lolEngine / lolFullMap / lolGameUi / lolCineOps: debugging handles, skipped.
             engine.screen.onWsaFrame = (wsa, frame, page, x, y) => { var w = (WsaPlayer)wsa; if (!string.IsNullOrEmpty(w.name) && (page == 0 || page == 2)) cineOps[w.name] = new CineOp { x = x, y = y, w = w.width, h = w.height, page = page }; };
             engine.uiCraftLoad(JsonSerializer.SerializeToNode(CraftingUi.readPouch(), Store.json) as JsonObject);
