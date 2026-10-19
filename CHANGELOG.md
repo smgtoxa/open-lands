@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
 
 ### The Imp's Pit, made reliable
 Every floor is now played through by an automatic tester before it ships: every level of the game as the borrowed
