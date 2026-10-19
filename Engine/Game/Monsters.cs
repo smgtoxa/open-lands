@@ -174,14 +174,14 @@ namespace Lol
             l.speedTotalWaitTicks = 1;
             l.flags = args[27];
             l.unk5 = args[29];
-            l.numDistAttacks = args[30];
+            l.numDistAttacks = args[30] & 0xff;   // bytes in the original
             l.numDistWeapons = args[31];
             for (int i = 0; i < 3; i += 1) l.distWeapons[i] = args[32 + i];
             l.attackSkillChance = args[35];
             l.attackSkillType = args[36];
             l.defenseSkillChance = args[37];
             l.defenseSkillType = args[38];
-            for (int i = 0; i < 3; i += 1) l.sounds[i] = args[39 + i];
+            for (int i = 0; i < 3; i += 1) l.sounds[i] = args[39 + i] & 0xff;   // unsigned bytes: -1 is 255 (no sound)
         }
 
         public int initMonster(int[] args)
@@ -269,9 +269,14 @@ namespace Lol
                     monster.mode = 0;
                     monsterDropItems(monster);
                     if (currentLevel != 29) setMonsterMode(monster, 14);
-                    queueAsync(() => runLevelScriptCustom(0x404, -1, monster.id, monster.id, 0, 0));
-                    checkSceneUpdateNeed(monster.block);
-                    if (monster.mode == 14) placeMonster(monster, 0, 0);
+                    // the death script sees the monster still on its block, as in the original: it is taken off
+                    // the map only after the script
+                    queueAsync(async () =>
+                    {
+                        await runLevelScriptCustom(0x404, -1, monster.id, monster.id, 0, 0);
+                        checkSceneUpdateNeed(monster.block);
+                        if (monster.mode == 14) placeMonster(monster, 0, 0);
+                    });
                 }
             }
         }
@@ -982,7 +987,7 @@ namespace Lol
                 }
                 else return false;
             }
-            if (monster.numDistAttacks != 255) monster.numDistAttacks -= 1;
+            if (monster.numDistAttacks != 255) monster.numDistAttacks = (monster.numDistAttacks - 1) & 0xff;
             monster.distAttackTick = (monster.properties.fightingStats[4] * 8) >> 8;
             return true;
         }

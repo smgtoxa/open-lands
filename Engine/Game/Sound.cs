@@ -257,12 +257,24 @@ namespace Lol
             return source;
         }
 
+        /// <summary>An AdLib effect played straight through the driver, without the ingame sound table
+        /// (KyraEngine_v1::snd_playSoundEffect: the Ruby of Truth's merge sound).</summary>
+        public void snd_playRawSoundEffect(int track)
+        {
+            if (sfxEnabled) adlibPost(new AdlibMessage { type = "play", track = track, volume = 0xff });
+        }
+
+        AudioSource sfxSource;
+        int sfxPriority;
+
         public void snd_playSoundEffect(int track, int volume)
         {
             if (track == 1 && (lastSfxTrack == -1 || lastSfxTrack == 1)) return;
             lastSfxTrack = track;
             if (track == -1 || track * 2 >= @static.IngameSfxIndex.Length || !sfxEnabled) return;
             volume &= 0xff;
+            int prIndex = track * 2 + 1 < @static.IngameSfxIndex.Length ? (short)@static.IngameSfxIndex[track * 2 + 1] : 0;
+            int priority = prIndex > 0 ? (prIndex * volume) >> 8 : -prIndex;
             int[] volTable1 = { 223, 159, 95, 47, 15, 0 };
             int[] volTable2 = { 255, 191, 127, 63, 30, 0 };
             for (int i = 0; i < 6; i += 1)
@@ -279,9 +291,28 @@ namespace Lol
             {
                 string file = $"{name}.VOC";
                 if (!res.exists(file)) return;
+                // the original's one sample channel: an effect of higher priority still playing keeps it, otherwise
+                // the new effect replaces it
+                if (sfxSource != null && sfxPriority > priority) return;
                 try
                 {
-                    playBuffer(vocBuffer(file, res.get(file)), volume);
+                    if (sfxSource != null)
+                    {
+                        var old = sfxSource;
+                        sfxSource = null;
+                        var done = old.onended;
+                        old.onended = null;
+                        try { audioHost?.Stop(old.handle); } catch (Exception) { /* already over */ }
+                        done?.Invoke();
+                    }
+                    var src = playBuffer(vocBuffer(file, res.get(file)), volume);
+                    if (src != null)
+                    {
+                        sfxSource = src;
+                        sfxPriority = priority;
+                        var ended = src.onended;
+                        src.onended = () => { ended?.Invoke(); if (sfxSource == src) sfxSource = null; };
+                    }
                 }
                 catch (Exception error)
                 {
@@ -415,6 +446,12 @@ namespace Lol
             adlibPost(new AdlibMessage { type = "load", name = $"{name}.ADL" });
         }
 
+        /// <summary>A track of the loaded music file, played as it is (the ending's credits: LOREFINL track 4).</summary>
+        public void snd_playRawTrack(int track)
+        {
+            if (musicEnabled) { adlibPlaying = true; adlibPost(new AdlibMessage { type = "play", track = track, volume = 0xff }); }
+        }
+
         public int snd_playTrack(int track)
         {
             if (tim != null && tim.introMode)
@@ -436,6 +473,14 @@ namespace Lol
                 }
             }
             return res;
+        }
+
+        /// <summary>Starts the music fading out without stopping the track (the ending's fadeOutSound).</summary>
+        public void snd_fadeOutMusic()
+        {
+            if (!musicEnabled || !adlibPlaying) return;
+            adlibPlaying = false;
+            adlibPost(new AdlibMessage { type = "fade" });
         }
 
         public int snd_stopMusic()
@@ -519,8 +564,16 @@ namespace Lol
                 }
             }
             if (files.Count == 0) return false;
+            var items = files.Select(f => new SpeechQueueItem { archive = archive, file = f }).ToList();
+            // the original waits for the line already playing to finish before it starts a new one, instead of
+            // cutting it off: the new line follows it
+            if (speechPlaying != null)
+            {
+                speechQueue.AddRange(items);
+                return true;
+            }
             snd_stopSpeech(false);
-            speechQueue = files.Select(f => new SpeechQueueItem { archive = archive, file = f }).ToList();
+            speechQueue = items;
             activeVoiceFileTotalTime = 1;
             speechLoading += 1;
             tim.abortFlag = 0;

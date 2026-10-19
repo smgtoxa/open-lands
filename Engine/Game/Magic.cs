@@ -381,8 +381,7 @@ namespace Lol
             var L = @static.LightningDefs;
             lightningCurSfx = L[(spellLevel << 2) + 2] | (L[(spellLevel << 2) + 3] << 8);
             lightningDiv = L[(spellLevel << 2) + 1];
-            lightningFirstSfx = 0;
-            lightningSfxFrame = 0;
+            lightningFirstSfx = 0;   // lightningSfxFrame runs on from the last cast, as in the original
             var mov = openWsa($"LITNING{spellLevel + 1}.WSA", 1);
             for (int i = 0; i < 4; i += 1) await playSpellAnimation(mov, 0, L[spellLevel << 2], 3, 93, 0, (m, x, y) => callbackProcessMagicLightning(), false);
             screen.setScreenPalette(screen.getPalette(1));
@@ -559,7 +558,7 @@ namespace Lol
 
         public void callbackProcessMagicLightning()
         {
-            if (lightningDiv == 2) queueAsync(() => shakeScene(1, 2, 3, 0));
+            if (lightningDiv == 2) spellShakePending = true;   // shaken right away, inside the frame (playSpellAnimation)
             var p1 = screen.getPalette(1);
             if (lightningSfxFrame % lightningDiv != 0) screen.setScreenPalette(p1);
             else

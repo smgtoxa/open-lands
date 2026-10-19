@@ -232,10 +232,12 @@ namespace Lol
         // Returns a JSON-serializable snapshot of the running game.
         public JsonObject saveState()
         {
+            completeDoorOperations();   // the original finishes moving doors first: a save never holds a half-open door
             generateTempData();
             // Items lying on this level only get their level tag when leaving it (resetItems); tag them now so
             // addLevelItems() finds them again after loading.
             // Only the head of a block's item chain carries the level tag; the rest hang off its nextAssignedObject.
+            var tagged = new List<int>();
             for (int i = 0; i < 1024; i += 1)
             {
                 int id = levelBlockProperties[i].assignedObjects;
@@ -247,8 +249,13 @@ namespace Lol
                     seen.Add(id);
                     itemsInPlay[id].level = head ? currentLevel : -1;
                     itemsInPlay[id].block = i;
+                    if (head) tagged.Add(id);
                 }
             }
+            var itemsJson = new JsonArray(itemsInPlay.Select(it => (JsonNode)SaveGame_toJson(it, SaveGame_ITEM_KEYS)).ToArray());
+            // the tags are for the saved copy only: the original takes them off again (addLevelItems), and a live
+            // head left tagged is linked a second time on the next visit, which loops the block's item chain
+            foreach (int id in tagged) itemsInPlay[id].level = -1;
             var characters = new JsonArray(this.characters.Select(c => (JsonNode)SaveGame_toJson(c, CHAR_FIELDS)).ToArray());
             var spawns = SaveGame_intKeyed(monsterSpawns ?? new Dictionary<int, Monster[]>(),
                 list => new JsonArray(list.Select(m => (JsonNode)SaveGame_toJson(m, SaveGame_MONSTER_KEYS)).ToArray()));
@@ -278,7 +285,7 @@ namespace Lol
                 ["flagsTable"] = SaveGame_plain(flagsTable), ["globalScriptVars"] = SaveGame_plain(globalScriptVars), ["brightness"] = brightness,
                 ["lampOilStatus"] = lampOilStatus, ["lampEffect"] = lampEffect, ["credits"] = credits, ["globalScriptVars2"] = SaveGame_plain(globalScriptVars2),
                 ["availableSpells"] = SaveGame_plain(availableSpells), ["hasTempDataFlags"] = hasTempDataFlags, ["playTimer"] = playTimer,
-                ["itemsInPlay"] = new JsonArray(itemsInPlay.Select(it => (JsonNode)SaveGame_toJson(it, SaveGame_ITEM_KEYS)).ToArray()), ["levels"] = levels, ["monsterSpawns"] = spawns,
+                ["itemsInPlay"] = itemsJson, ["levels"] = levels, ["monsterSpawns"] = spawns,
                 ["charSelection"] = charSelection,
                 ["lampSwitchedOff"] = lampSwitchedOff,
                 ["questDone"] = new JsonArray((questDone ?? new HashSet<string>()).Select(q => (JsonNode)JsonValue.Create(q)).ToArray()),
@@ -293,7 +300,7 @@ namespace Lol
         /// <summary>The typed array each int[] Character field is in makeEmptyCharacter: 8 = Uint8Array, -8 = Int8Array.</summary>
         static readonly Dictionary<string, int> SaveGame_typedAs = new Dictionary<string, int>
         {
-            ["skillLevels"] = 8, ["skillModifiers"] = -8, ["characterUpdateEvents"] = 8, ["characterUpdateDelay"] = 8,
+            ["skillLevels"] = 8, ["skillModifiers"] = -8, ["characterUpdateEvents"] = 8,   // characterUpdateDelay: plain (a signed byte for the original's events, the port's potions run longer)
         };
 
         /// <summary>A saved character back (loadState's reading; Companions.cs reads the camp's the same way).</summary>
@@ -322,10 +329,9 @@ namespace Lol
             if ((c.flags & 1) != 0)
             {
                 c.defaultModifiers = cdf[c.raceClassSex];
-                // Transient combat state must not outlive its timer event (a save taken while a script had the
-                // timers paused would otherwise keep the attack button locked forever).
-                c.flags &= ~0x2000;
-                if (!c.characterUpdateEvents.Any(e => e == 1)) { c.flags &= ~4; c.weaponHit = 0; }
+                // The original restores these as saved. Only a state with no timer event left to end it (a save
+                // taken while a script had the timers paused) is repaired, or the attack button stays locked forever.
+                if (!c.characterUpdateEvents.Any(e => e == 1)) { c.flags &= ~(4 | 0x2000); c.weaponHit = 0; }
             }
             return c;
         }
@@ -436,6 +442,7 @@ namespace Lol
             await setHandItem(itemInHand);
             curTlkFile = -1;
             await loadLevel(currentLevel);
+            flagsTable[73] |= 0x08;   // as the original sets after loading
             if (repairOnLoad) uiRepairEquipment(); // the game's page asks for it; the parity tracers do not
             // The pit: the floor itself came back with the level temp data; this restores the run around it.
             // It has to follow loadLevel, which would otherwise re-attach the borrowed level's script.

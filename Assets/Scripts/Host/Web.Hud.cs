@@ -18,6 +18,7 @@ namespace LolHost
     {
         readonly List<(VisualElement el, VisualElement parent, int index)> hudMoved = new List<(VisualElement, VisualElement, int)>();
         bool hudOn;
+        bool hudEndingHidden;
         string hudKey;
         VisualElement hudPad;
         VisualElement hudPlay, hudMap, hudQuests, hudCompass, hudActions, hudSpells, hudTools, hudLog, hudParty, hudBar, hudStage;
@@ -36,6 +37,13 @@ namespace LolHost
             // show the same screen (the classic interface keeps the page's own pixel sizes)
             float scale = on ? Mathf.Clamp(Math.Min(Screen.width / 1600f, Screen.height / 1000f), 0.5f, 3f) : 1f;
             if (HostMain.Panel != null && Math.Abs(HostMain.Panel.scale - scale) > 0.005f) HostMain.Panel.scale = scale;
+            // the ending loads its own palette: the portraits, drawn in the game's, would show in its colours
+            bool ending = engine != null && engine.outroPlaying;
+            if (ending != hudEndingHidden && (hudParty ?? Q(".ui-party")) is VisualElement party)
+            {
+                hudEndingHidden = ending;
+                if (ending) party.style.visibility = Visibility.Hidden; else party.style.visibility = StyleKeyword.Null;
+            }
             if (!on) return;
             hudFitSpells();
             // in the pit only its floor's goal is shown; the story's objectives and the errand come back outside

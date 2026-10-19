@@ -114,6 +114,10 @@ namespace Lol
         public Monster[] spawns;
         public byte[] flags;
         public List<DungeonItemRecord> items;
+        /// <summary>Items already sent to a never-visited borrowed level (a pit hole, a script) before the pit took it:
+        /// they are its only items to give back; the rest came from its .INI, which makes them again on the real visit.
+        /// Null in saves made before 0.3 (then none are given back, as before).</summary>
+        public List<int> sentAhead;
     }
 
     /// <summary>dungeon.mjs uiDungeonDress: hangDoor</summary>
@@ -704,6 +708,7 @@ namespace Lol
                 spawns = monsterSpawns != null && monsterSpawns.TryGetValue(level, out var sp) ? sp : null,
                 flags = flagsTable.ToArray(),
                 items = new List<DungeonItemRecord>(),
+                sentAhead = Enumerable.Range(1, 399).Where(i => itemsInPlay[i] != null && itemsInPlay[i].itemPropertyIndex != 0 && itemsInPlay[i].level == level).ToList(),
             };
         }
 
@@ -1494,6 +1499,9 @@ namespace Lol
             {
                 var it = rec.id < itemsInPlay.Count() ? itemsInPlay[rec.id] : null;
                 if (it == null) continue;
+                // a level the party never really visited keeps only what was sent ahead to it; its .INI items go,
+                // or its first real visit would make them a second time
+                if (!d.backup.hadFlag && (d.backup.sentAhead == null || !d.backup.sentAhead.Contains(rec.id))) { deleteItem(rec.id); continue; }
                 it.level = d.level;
                 it.block = rec.block;
                 it.x = rec.x;
@@ -1527,7 +1535,7 @@ namespace Lol
                 ["spots"] = JsonSerializer.SerializeToNode(d.spots, Dungeon_json),
                 ["backup"] = new JsonObject
                 {
-                    ["hadFlag"] = d.backup.hadFlag, ["items"] = JsonSerializer.SerializeToNode(d.backup.items, Dungeon_json), ["flags"] = new JsonArray(d.backup.flags.Select(f => (JsonNode)(int)f).ToArray()),
+                    ["hadFlag"] = d.backup.hadFlag, ["sentAhead"] = d.backup.sentAhead != null ? JsonSerializer.SerializeToNode(d.backup.sentAhead, Dungeon_json) : null, ["items"] = JsonSerializer.SerializeToNode(d.backup.items, Dungeon_json), ["flags"] = new JsonArray(d.backup.flags.Select(f => (JsonNode)(int)f).ToArray()),
                     ["temp"] = d.backup.temp != null ? plainTemp(d.backup.temp) : null, ["spawns"] = d.backup.spawns != null ? JsonSerializer.SerializeToNode(d.backup.spawns, Dungeon_json) : null,
                 },
             };
@@ -1562,6 +1570,7 @@ namespace Lol
                 {
                     hadFlag = backup["hadFlag"] is JsonValue hv && hv.TryGetValue(out bool h) && h,
                     items = backup["items"]?.Deserialize<List<DungeonItemRecord>>(Dungeon_json) ?? new List<DungeonItemRecord>(),
+                    sentAhead = backup["sentAhead"]?.Deserialize<List<int>>(Dungeon_json),
                     flags = (backup["flags"] as JsonArray ?? new JsonArray()).Select(f => (byte)Dungeon_int(f)).ToArray(),
                     temp = backup["temp"] is JsonObject t ? reviveTemp(t, this) : null,
                     spawns = backup["spawns"]?.Deserialize<Monster[]>(Dungeon_json),

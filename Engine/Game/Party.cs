@@ -60,10 +60,15 @@ namespace Lol
             addTimer(11, id => timerFadeMessageText(id), 360, false);
         }
 
+        /// <summary>The timers that run on the original's system clock 2 (doors, monsters, character updates, flying
+        /// objects, scene animations, regeneration, portraits, lamp). The message fade (11) runs on another clock and
+        /// keeps going while these are stopped.</summary>
+        static readonly int[] CLOCK2_TIMERS = { 0, 0x10, 0x11, 3, 4, 0x50, 0x51, 0x52, 8, 9, 10 };
+
         public void enableSysTimer(int sysTimer)
         {
             if (sysTimer != 2) return;
-            foreach (int id in new[] { 0x10, 0x11, 3, 4, 8, 9, 10, 11 }) timerPauseSingle(id, false);
+            foreach (int id in CLOCK2_TIMERS) timerPauseSingle(id, false);
             sysTimerPaused = false;
         }
 
@@ -71,13 +76,13 @@ namespace Lol
         // interface (equipping from the character screen, map notes...) keeps working.
         public void uiPauseTimers(bool pause)
         {
-            foreach (int id in new[] { 0x10, 0x11, 3, 4, 8, 9, 10, 11 }) timerPauseSingle(id, pause);
+            foreach (int id in CLOCK2_TIMERS) timerPauseSingle(id, pause);
         }
 
         public void disableSysTimer(int sysTimer)
         {
             if (sysTimer != 2) return;
-            foreach (int id in new[] { 0x10, 0x11, 3, 4, 8, 9, 10, 11 }) timerPauseSingle(id, true);
+            foreach (int id in CLOCK2_TIMERS) timerPauseSingle(id, true);
             sysTimerPaused = true;
         }
 
@@ -111,7 +116,7 @@ namespace Lol
                             if (c.weaponHit != 0)
                             {
                                 c.weaponHit = 0;
-                                c.characterUpdateDelay[ii] = (byte)calcMonsterSkillLevel(i, 6);
+                                c.characterUpdateDelay[ii] = (sbyte)calcMonsterSkillLevel(i, 6);
                                 if (c.characterUpdateDelay[ii] > eventsLeft) eventsLeft = c.characterUpdateDelay[ii];
                             }
                             else c.flags &= 0xfffb;
@@ -319,7 +324,9 @@ namespace Lol
             {
                 if (l.characterUpdateEvents[i] != 0 && (overwrite == 0 || l.characterUpdateEvents[i] != updateType)) continue;
                 l.characterUpdateEvents[i] = (byte)updateType;
-                l.characterUpdateDelay[i] = (byte)updateDelay;   // Types.cs byte[]; the JS array is a plain one (3600 fits there)
+                // the original keeps the delay in a signed byte (3600 for paralysis becomes 16, 128 and up count as
+                // already over); the port's potion timers (9 and up) are not original and keep their full length
+                l.characterUpdateDelay[i] = updateType >= 9 ? updateDelay : (sbyte)updateDelay;
                 timerSetNextRun(3, getMillis());
                 timerEnable(3);
                 break;
@@ -482,10 +489,25 @@ namespace Lol
 
         public void setCharacterMagicOrHitPoints(int charNum, int type, int points, int mode)
         {
+            var bar = applyMagicOrHitPoints(charNum, type, points, mode);
+            if (bar != null) queueAsync(bar);   // the caller cannot wait: the bar moves right after it
+        }
+
+        /// <summary>The same, waiting for the bar (casting: the original moves it before the spell goes off).</summary>
+        public async Task setCharacterMagicOrHitPointsNow(int charNum, int type, int points, int mode)
+        {
+            var bar = applyMagicOrHitPoints(charNum, type, points, mode);
+            if (bar != null) await bar();
+        }
+
+        /// <summary>Sets the points; returns the original's bar animation (two points per tick, slowing near the
+        /// end, a small overshoot and back), or null when there is nothing to draw. The original changes the 4th
+        /// party slot too (ScummVM skips it); that slot has no bar.</summary>
+        Func<Task> applyMagicOrHitPoints(int charNum, int type, int points, int mode)
+        {
             var barData = Party_barData;
-            if (charNum > 2) return;
             var c = characters[charNum];
-            if ((c.flags & 1) == 0) return;
+            if ((c.flags & 1) == 0) return null;
             int pointsMax = type != 0 ? c.magicPointsMax : c.hitPointsMax;
             int pointsCur = type != 0 ? c.magicPointsCur : c.hitPointsCur;
             int newVal = mode == 2 ? pointsMax + points : mode != 0 ? pointsCur + points : points;
@@ -496,19 +518,36 @@ namespace Lol
                 c.hitPointsCur = newVal;
                 if (c.hitPointsCur < 1) c.flags |= 8;
             }
-            if ((updateFlags & 2) != 0) return;
-            // The animated bar (with delays) is drawn synchronously at its final value here.
-            var cf = screen.setFont("6");
-            int cp = screen.curPage;
-            screen.curPage = 0;
-            int s = pointsMax != 0 ? 8192 / pointsMax : 0;   // JS: 8192 / 0 is Infinity, and both products below then come out 0
-            pointsMax = (s * pointsMax) >> 8;
-            newVal = (s * newVal) >> 8;
+            if ((updateFlags & 2) != 0 || charNum > 2 || pointsMax == 0) return null;
+            int s = 8192 / pointsMax;
+            int max = (s * pointsMax) >> 8;
+            int cur = (s * pointsCur) >> 8;
+            int target = Math.Max(0, Math.Min(max, (s * newVal) >> 8));
+            int step = target > cur ? 2 : -2;
+            int to = Math.Max(0, Math.Min(max, target + step));
+            if (to == cur) return null;
             var bd = barData[type];
-            gui_drawLiveMagicBar(bd[0] + activeCharsXpos[charNum], 175, newVal, 0, pointsMax, 5, 32, bd[1], 1, bd[3]);
-            screen.printText(getLangString(bd[4]), bd[0] + activeCharsXpos[charNum], 144, bd[2], 0);
-            screen.setFont(cf);
-            screen.curPage = cp;
+            return async () =>
+            {
+                var cf = screen.setFont("6");
+                int cp = screen.curPage;
+                screen.curPage = 0;
+                int st = to >= cur ? 2 : -2;
+                int end = to;
+                for (int i = cur; (i != end || end != target) && !quit;)
+                {
+                    if (Math.Abs(i - end) < Math.Abs(st)) st >>= 1;
+                    i += st;
+                    double delayTimer = getMillis() + tickLength;
+                    gui_drawLiveMagicBar(bd[0] + activeCharsXpos[charNum], 175, i, 0, max, 5, 32, bd[1], 1, bd[3]);
+                    screen.printText(getLangString(bd[4]), bd[0] + activeCharsXpos[charNum], 144, bd[2], 0);
+                    if (i == end) { end = target; st = -st; }
+                    await delayUntil(delayTimer);
+                    if (st == 0) break;
+                }
+                screen.setFont(cf);
+                screen.curPage = cp;
+            };
         }
 
         public void increaseExperience(int charNum, int skill, int points)
@@ -587,8 +626,8 @@ namespace Lol
             int sk;
             if ((attacker & 0x8000) != 0)
             {
-                hitChanceModifier = monsters[target & 0x7fff].properties.fightingStats[0];
-                sk = 100 - monsters[target & 0x7fff].properties.skillLevel;
+                hitChanceModifier = monsters[attacker & 0x7fff].properties.fightingStats[0];
+                sk = 100 - monsters[attacker & 0x7fff].properties.skillLevel;
             }
             else
             {
@@ -600,10 +639,11 @@ namespace Lol
             if ((target & 0x8000) != 0)
             {
                 evadeChanceModifier = monsters[target & 0x7fff].properties.fightingStats[3];
-                evadeChanceModifier = (evadeChanceModifier * @static.MonsterModifiers4[monsterDifficulty]) >> 8;
                 monsters[target & 0x7fff].flags |= 0x10;
             }
             else evadeChanceModifier = characters[target].defaultModifiers[3];
+            // the original scales the evade chance by the difficulty for heroes too (ScummVM only for monsters)
+            evadeChanceModifier = (evadeChanceModifier * @static.MonsterModifiers4[monsterDifficulty]) >> 8;
             int r = rollDice(1, 100);
             if (r >= sk) return 2;
             double v = Math.Truncate((double)(evadeChanceModifier << 8) / hitChanceModifier);   // float division, as in JS (a zero divisor gives Infinity/NaN)
@@ -757,7 +797,14 @@ namespace Lol
             {
                 await screen.fadeClearSceneWindow(10);
                 await restoreAfterSpecialScene(0, 1, 1, 0);
-                gui_drawAllCharPortraitsWithStats();
+                // the original's death setup: death music, no speech, the world stops behind the menu
+                snd_playTrack(325);
+                stopPortraitSpeechAnim();
+                initTextFading(0, 1);
+                setMouseCursorToIcon(0);
+                updateFlags |= 4;
+                setLampMode(true);
+                disableSysTimer(2);
                 await gui.runMenu(gui.deathMenu);
                 setMouseCursorToItemInHand();
                 updateFlags &= 0xfffb;
@@ -787,7 +834,10 @@ namespace Lol
                     t = removeCharacterItem(target, 0x20);
                     if (t != 0)
                     {
-                        deleteItem(t);
+                        // after the item's remove script (queued by removeCharacterItem): the original runs that
+                        // script first, on the intact item, and only then destroys it
+                        int gone = t;
+                        queueAsync(() => { deleteItem(gone); return Task.CompletedTask; });
                         if (characterSays(0x401b, characters[target].id, true) != 0) txt.printMessage(6, getLangString(0x401b));
                     }
                     break;
@@ -837,7 +887,8 @@ namespace Lol
                         }
                         else
                         {
-                            deleteItem(itm);
+                            int gone = itm;   // after its remove script, as above
+                            queueAsync(() => { deleteItem(gone); return Task.CompletedTask; });
                             if (characterSays(0x401d, characters[attacker].id, true) != 0) txt.printMessage(6, getLangString(0x401d));
                         }
                     }
@@ -858,7 +909,7 @@ namespace Lol
                     monster.hitPoints = Math.Min(monster.properties.hitPoints, monster.hitPoints + damage);
                     break;
                 case 5:
-                    if ((flags & 0x84) == 0x84) monster.numDistAttacks += 1;
+                    if ((flags & 0x84) == 0x84) monster.numDistAttacks = (monster.numDistAttacks + 1) & 0xff;   // a byte: 255 + 1 wraps to 0
                     break;
                 default: break;
             }

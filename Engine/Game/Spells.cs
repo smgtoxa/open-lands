@@ -161,7 +161,7 @@ namespace Lol
             enableSysTimer(2);
         }
 
-        public void initDialogueSequence(int controlMode, int pageNum)
+        public async Task initDialogueSequence(int controlMode, int pageNum)
         {
             if (controlMode != 0)
             {
@@ -193,19 +193,17 @@ namespace Lol
             }
             else
             {
-                queueAsync(async () =>
-                {
-                    await txt.setupField(true);
-                    await txt.expandField();
-                    setupScreenDims();
-                    txt.clearDim(4);
-                });
+                // in line, as the original: the text that follows is printed into the expanded box
+                await txt.setupField(true);
+                await txt.expandField();
+                setupScreenDims();
+                txt.clearDim(4);
             }
             currentControlMode = controlMode;
             dialogueField = true;
         }
 
-        public void restoreAfterDialogueSequence(int controlMode)
+        public async Task restoreAfterDialogueSequence(int controlMode)
         {
             if (!dialogueField) return;
             ui?.Invoke("choices", new object[] { null });
@@ -223,7 +221,7 @@ namespace Lol
                 var d = screen.getScreenDim(5);
                 screen.fillRect(d.sx, d.sy, d.sx + d.w - 2, d.sy + d.h - 2, d.col2);
                 txt.clearDim(4);
-                queueAsync(() => txt.setupField(false));
+                await txt.setupField(false);
             }
             dialogueField = false;
         }
@@ -311,8 +309,8 @@ namespace Lol
             {
                 if (sp.mpRequired[spellLevel] > characters[charNum].magicPointsCur) return 0;
                 if (sp.hpRequired[spellLevel] >= characters[charNum].hitPointsCur) return 0;
-                setCharacterMagicOrHitPoints(charNum, 1, -sp.mpRequired[spellLevel], 1);
-                setCharacterMagicOrHitPoints(charNum, 0, -sp.hpRequired[spellLevel], 1);
+                await setCharacterMagicOrHitPointsNow(charNum, 1, -sp.mpRequired[spellLevel], 1);
+                await setCharacterMagicOrHitPointsNow(charNum, 0, -sp.hpRequired[spellLevel], 1);
                 gui_drawCharPortraitWithStats(charNum);
                 if (proc != null) await proc(activeSpell);
             }
@@ -389,6 +387,9 @@ namespace Lol
         }
 
         // pal1/pal2/fadeDelay: optional palette fade running alongside the animation (fadeDelay in ticks).
+        /// <summary>Set by a frame callback (Lightning) that shakes the scene: the original does it there and then.</summary>
+        bool spellShakePending;
+
         public async Task playSpellAnimation(WsaPlayer mov, int firstFrame, int lastFrame, int frameDelay, int x, int y, Action<WsaPlayer, int, int> callback, bool restoreScreen, byte[] pal1 = null, byte[] pal2 = null, int fadeDelay = 0)
         {
             int w = mov != null ? mov.width : 0;
@@ -404,6 +405,7 @@ namespace Lol
                 double delayTimer = getMillis() + tickLength * frameDelay;
                 if (mov != null || callback != null) screen.copyPage(12, 2);
                 callback?.Invoke(mov, x, y);
+                if (spellShakePending) { spellShakePending = false; await shakeScene(1, 2, 3, 0); }
                 if (mov != null) mov.displayFrame(curFrame % mov.numFrames, 2, x, y, 0x5000, transparencyTable1, transparencyTable2);
                 if (mov != null || callback != null) screen.copyRegion(x, y, x, y, w, h, 2, 0, true);
                 if (pal1 != null && pal2 != null)
@@ -452,8 +454,9 @@ namespace Lol
             var wFrames = new List<int>();
             for (int i = 0; i < 6; i += 1)
             {
-                wX.Add((presentationRandom(0x7fff) % 64) + ((176 - mov.width) >> 1) + 80);
-                wY.Add((presentationRandom(0x7fff) % 32) + ((120 - mov.height) >> 1) - 16);
+                // the original draws these from the dice generator (rand), so a Spark moves every later roll
+                wX.Add((Js.Floor(randomFloat() * 0x8000) % 64) + ((176 - mov.width) >> 1) + 80);
+                wY.Add((Js.Floor(randomFloat() * 0x8000) % 32) + ((120 - mov.height) >> 1) - 16);
                 wFrames.Add(i << 1);
             }
             for (int i = 0, d = (spellLevel << 1) + 12; i < d; i += 1)
@@ -796,9 +799,30 @@ namespace Lol
                 m.nextDrawObject = 0;
                 if (m.properties != null) m.properties = monsterProperties[m.type];
                 monsters[i] = m;
-                if (m.block != 0 && m.mode != 14 && m.hitPoints > 0) assignObjectToBlock(levelBlockProperties[m.block], m.id | 0x8000);
+                // as the original: every saved monster with a block goes back through placeMonster (block from x, y)
+                if (m.block != 0)
+                {
+                    m.block = 0;
+                    m.properties = monsterProperties[m.type];
+                    placeMonster(m, m.x, m.y);
+                }
             }
             flyingObjects = t.flyingObjects.Select(f => Spells_cloneFlyingObject(f)).ToArray();
+            restoreTempDataAdjustMonsterStrength(t);
+        }
+
+        /// <summary>The difficulty changed since the level was left: its monsters' hit points are scaled to the new one.</summary>
+        void restoreTempDataAdjustMonsterStrength(LvlTempData t)
+        {
+            if (t.monsterDifficulty == monsterDifficulty) return;
+            int d = (@static.MonsterModifiers1[t.monsterDifficulty] << 8) / @static.MonsterModifiers1[monsterDifficulty];
+            foreach (var m in monsters)
+            {
+                if (m.mode >= 14 || m.block == 0 || m.hitPoints <= 0) continue;
+                m.hitPoints = (d * m.hitPoints) >> 8;
+                if (monsterDifficulty < t.monsterDifficulty) m.hitPoints += 1;
+                if (m.hitPoints == 0) m.hitPoints = 1;
+            }
         }
     }
 }

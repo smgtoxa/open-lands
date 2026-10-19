@@ -336,9 +336,10 @@ namespace Lol
         public void timerSetNextRun(int id, double nextRun) { if (timers.TryGetValue(id, out var t)) t.nextRun = nextRun; }
         public double timerGetNextRun(int id) => timers.TryGetValue(id, out var t) ? t.nextRun : 0;
         public int timerGetDelay(int id) => timers.TryGetValue(id, out var t) ? t.countdown : 0;
-        public void timerEnable(int id) { if (timers.TryGetValue(id, out var t)) t.enabled = 1; }
-        public void timerDisable(int id) { if (timers.TryGetValue(id, out var t)) t.enabled = 0; }
-        public bool timerIsEnabled(int id) => timers.TryGetValue(id, out var t) && t.enabled == 1;
+        // Enabling or disabling leaves the pause bit (2) alone: in the original a timer on a stopped clock stays stopped.
+        public void timerEnable(int id) { if (timers.TryGetValue(id, out var t)) t.enabled |= 1; }
+        public void timerDisable(int id) { if (timers.TryGetValue(id, out var t)) t.enabled &= ~1; }
+        public bool timerIsEnabled(int id) => timers.TryGetValue(id, out var t) && (t.enabled & 1) != 0;
 
         public void timerPauseSingle(int id, bool pause)
         {
@@ -413,6 +414,23 @@ namespace Lol
         }
 
         public int presentationRandom(int range) => Js.Floor(presentationFloat() * (range + 1));
+
+        // The original's second generator (Westwood's 3-byte shift register, seeded 0x12344321), apart from the dice
+        // one: screen shakes draw from it. 0..255.
+        readonly byte[] wwSeed = { 0x21, 0x43, 0x34 };
+        public int westwoodRandom()
+        {
+            int s0 = wwSeed[0];
+            int cf = (s0 >> 1) & 1;   // shr al twice: the carry is bit 1
+            int al = s0 >> 2;
+            int c = wwSeed[2] >> 7; wwSeed[2] = (byte)((wwSeed[2] << 1) | cf); cf = c;   // rcl [2]
+            c = wwSeed[1] >> 7; wwSeed[1] = (byte)((wwSeed[1] << 1) | cf); cf = c;       // rcl [1]
+            cf ^= 1;                                                                     // cmc
+            al = (al - s0 - cf) & 0xff;                                                  // sbb al, [0]
+            cf = al & 1;                                                                 // shr al
+            wwSeed[0] = (byte)((s0 >> 1) | (cf << 7));                                  // rcr [0]
+            return wwSeed[0] ^ wwSeed[1];
+        }
 
         public int presentationRoll(int times, int pips, int inc = 0)
         {
@@ -534,7 +552,7 @@ namespace Lol
                 asyncQueue.RemoveAt(0);
                 try { await fn(); }
                 catch (QuitException) { throw; }
-                catch (Exception error) { log($"async task failed: {error.Message}"); }
+                catch (Exception error) { log($"async task failed: {error.Message} {error.StackTrace?.Split('\n').FirstOrDefault()?.Trim()}"); }
             }
         }
 
@@ -632,7 +650,9 @@ namespace Lol
             present();
         }
 
-        // gui_updateInput: dispatch queued events against the active button list.
+        // gui_updateInput: dispatch queued events against the active button list. As in the original, one event
+        // per call (one per main-loop pass), so timers and the scene update run between buffered clicks and moves;
+        // events that do nothing (mouse up, unknown) are skipped without using the turn.
         public async Task gui_updateInput()
         {
             while (events.Count > 0 && !quit)
@@ -654,7 +674,7 @@ namespace Lol
                     {
                         if (weaponsDisabled || availableSpells[1] == -1) continue;
                         gui_highlightSelectedSpell(false);
-                        if (availableSpells[++selectedSpell] == -1) selectedSpell = 0;
+                        if (++selectedSpell >= availableSpells.Length || availableSpells[selectedSpell] == -1) selectedSpell = 0;
                         gui_highlightSelectedSpell(true);
                         gui_drawAllCharPortraitsWithStats();
                     }
@@ -675,6 +695,7 @@ namespace Lol
                     int result = await b.callback(b);
                     if (result != 0 || (b.flags & 0x20) != 0 || buttonListChanged) break;
                 }
+                break;
             }
         }
 
@@ -687,9 +708,9 @@ namespace Lol
                 if (restartRequested) return "restart";
                 if (nextScriptFunc != 0)
                 {
-                    int f = nextScriptFunc;
+                    // cleared after the run, as in the original: a function that schedules itself runs once
+                    await runLevelScript(nextScriptFunc, 2);
                     nextScriptFunc = 0;
-                    await runLevelScript(f, 2);
                 }
                 try
                 {
@@ -707,7 +728,7 @@ namespace Lol
                     // Undo what an aborted script sequence would normally restore itself.
                     enableSysTimer(2);
                     needSceneRestore = 0;
-                    if (dialogueField) restoreAfterDialogueSequence(0);
+                    if (dialogueField) await restoreAfterDialogueSequence(0);
                     if ((updateFlags & 3) != 0) _ = restoreAfterSceneWindowDialogue(1);   // not awaited in lol.mjs either
                     gui_enableControls();
                     weaponsDisabled = false;

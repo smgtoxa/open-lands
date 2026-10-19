@@ -163,21 +163,18 @@ namespace Lol
         //
         // Each entry is a guarantee the script makes once its flag is up: "no one of mine is still on
         // `block`". Walking them out rather than teleporting them keeps it looking like the script did it.
-        // `force` skips the flag test. At level load the flag is the only evidence the script has already
-        // had its turn, so it is checked. When the party is actually standing there being refused the way,
-        // the flag does not matter: an NPC on that block with nowhere to go is stuck whatever the flag says,
-        // and the script's whole purpose is that he is not standing there.
+        // The flag is the only evidence the script has already had its turn, so it is always checked.
         static readonly (int level, int flag, int block, int dest)[] Scene_strandedGuards =
         {
             // Gladstone Keep gate: block 557's greeting sets flag 110, then sends the guard west off 525.
             (1, 110, 525, 524),
         };
 
-        public void repairStrandedScriptGuards(int index, bool force = false)
+        public void repairStrandedScriptGuards(int index)
         {
             foreach (var g in Scene_strandedGuards)
             {
-                if (g.level != index || (!force && queryGameFlag(g.flag) == 0)) continue;
+                if (g.level != index || queryGameFlag(g.flag) == 0) continue;
                 foreach (var m in monsters)
                 {
                     if (m == null || m.hitPoints <= 0 || m.mode != 1 || m.block != g.block) continue;
@@ -222,20 +219,6 @@ namespace Lol
             await loadLevelWallData(index, true);
             loadLevelFlag = 1;
             int f = hasTempDataFlags & (1 << (index - 1));
-            // A level with no saved state is about to be built from scratch, and its .INI will create its
-            // items all over again. Anything still tagged with this level is left from a visit that was
-            // thrown away - the Imp's Pit discards one every time it borrows a level - and keeping those
-            // records only fills the world's fixed item table until the next level to load cannot allocate.
-            // What the party carries is never tagged with a level, so it is untouched by this.
-            if (f == 0)
-            {
-                for (int it = 1; it < itemsInPlay.Length; it += 1)
-                {
-                    var item = itemsInPlay[it];
-                    if (item == null || item.itemPropertyIndex == 0 || item.level != index) continue;
-                    deleteItem(it);
-                }
-            }
             await runInitScript($"LEVEL{index}.INI", f != 0 ? 0 : 1);
             if (f != 0) restoreBlockTempData(index);
             // Unity port: a saved level can hold monsters of another level (the re-entry respawn once ran while a
@@ -519,6 +502,7 @@ namespace Lol
                 else l.flags &= 0xdf;
             }
             else l.walls[wall] = (byte)val;
+            checkSceneUpdateNeed(block);   // the original redraws when the changed block is in view
         }
 
         // ---- coordinates ----
@@ -592,6 +576,7 @@ namespace Lol
 
         public async Task notifyBlockNotPassable(int scrollFlag)
         {
+            removeInputTop();   // the original empties the input queue: moves queued against a wall are dropped
             if (scrollFlag != 0) await movePartySmoothScrollBlocked(2);
             snd_stopSpeech(true);
             txt.printMessage(0x8002, getLangString(0x403f));
@@ -607,10 +592,10 @@ namespace Lol
             int npos = calcNewBlockPosition(currentBlock, direction);
             if (!checkBlockPassability(npos, direction))
             {
-                // The way is shut. If what shuts it is an NPC whose one-shot script can no longer order him
-                // aside, re-issue that order now rather than only at level load: whichever path put him back
-                // on his post, this is the moment it matters, and he walks off within a second.
-                repairStrandedScriptGuards(currentLevel, true);
+                // The way is shut. If what shuts it is an NPC whose one-shot script already ran (its flag is up)
+                // but could not order him aside, re-issue that order now. Only then: before his script has had
+                // its turn he stays on his post, as in the original.
+                repairStrandedScriptGuards(currentLevel);
                 await notifyBlockNotPassable(unk2 != 0 ? 0 : 1);
                 gui_toggleButtonDisplayMode(buttonShape, 0);
                 return;
@@ -782,7 +767,7 @@ namespace Lol
         {
             int v = wllShapeMap[levelBlockProperties[block].walls[direction]];
             if (!clickedShape(v)) return 0;
-            snd_playSoundEffect(0x69, -1);
+            snd_stopSpeech(true);   // as the original: the click cuts the current speech, it plays no sound
             await runLevelScript(block, 0x40);
             return 1;
         }
@@ -792,8 +777,8 @@ namespace Lol
             int v = wllShapeMap[levelBlockProperties[block].walls[direction]];
             if (!clickedShape(v)) return 0;
             levelBlockProperties[block].walls[direction] += 1;
-            levelBlockProperties[block].walls[direction ^ 2] += 1;
-            snd_playSoundEffect(0x1c, -1);
+            sceneUpdateRequired = true;
+            snd_playSoundEffect(30, -1);
             await runLevelScript(block, clickedSpecialFlag);
             return 1;
         }
@@ -803,8 +788,8 @@ namespace Lol
             int v = wllShapeMap[levelBlockProperties[block].walls[direction]];
             if (!clickedShape(v)) return 0;
             levelBlockProperties[block].walls[direction] -= 1;
-            levelBlockProperties[block].walls[direction ^ 2] -= 1;
-            snd_playSoundEffect(0x1d, -1);
+            sceneUpdateRequired = true;
+            snd_playSoundEffect(29, -1);
             await runLevelScript(block, clickedSpecialFlag);
             return 1;
         }
@@ -1527,8 +1512,8 @@ namespace Lol
             while (endTime > getMillis())
             {
                 delayTimer += 2 * tickLength;
-                int s1 = width != 0 ? (presentationRandom(255) % (width << 1)) - width : 0;
-                int s2 = height != 0 ? (presentationRandom(255) % (height << 1)) - height : 0;
+                int s1 = width != 0 ? (westwoodRandom() % (width << 1)) - width : 0;
+                int s2 = height != 0 ? (westwoodRandom() % (height << 1)) - height : 0;
                 var (x1, x2, w) = s1 >= 0 ? (112, 112 + s1, 176 - s1) : (112 - s1, 112, 176 + s1);
                 var (y1, y2, h) = s2 >= 0 ? (0, s2, 120 - s2) : (-s2, 0, 120 + s2);
                 screen.copyRegion(x1, y1, x2, y2, w, h, 6, 0, true);
@@ -1549,7 +1534,7 @@ namespace Lol
             {
                 if (suspendGui != 0) gui_specialSceneSuspendControls(1);
                 if (allowSceneUpdate == 0) sceneDefaultUpdate = 0;
-                if (hasDialogue != 0) initDialogueSequence(fieldType, 0);
+                if (hasDialogue != 0) await initDialogueSequence(fieldType, 0);
                 if (fadeFlag != 0)
                 {
                     await screen.fadePalette(screen.getPalette(3), 10);
@@ -1570,7 +1555,7 @@ namespace Lol
                     await screen.fadePalette(p3, 10);
                     screen.fadeFlag = 0;
                 }
-                if (hasDialogue != 0) initDialogueSequence(fieldType, 0);
+                if (hasDialogue != 0) await initDialogueSequence(fieldType, 0);
                 setSpecialSceneButtons(112, 0, 176, 120, controlMode);
             }
         }
@@ -1580,7 +1565,7 @@ namespace Lol
             if (needSceneRestore == 0) return 0;
             needSceneRestore = 0;
             enableSysTimer(2);
-            if (dialogueField) restoreAfterDialogueSequence(currentControlMode);
+            if (dialogueField) await restoreAfterDialogueSequence(currentControlMode);
             if (specialSceneFlag != 0) gui_specialSceneRestoreControls(currentControlMode);
             int l = currentControlMode;
             currentControlMode = 0;

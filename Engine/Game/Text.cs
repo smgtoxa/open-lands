@@ -211,10 +211,30 @@ namespace Lol
             }
         }
 
-        // Synchronous variant for short status messages (no page breaks).
+        // Synchronous variant for status messages. The original prints these with its full text routine, so a
+        // page break (control char 1, or a full box) waits for MORE; the caller cannot wait, so the rest of the text
+        // is finished through the async queue, on the same page, font and box.
         public void displayTextSync(string str)
         {
-            foreach (var step in this.displayTextGen(str, false)) if (!string.IsNullOrEmpty(step)) break;
+            var it = this.displayTextGen(str, false).GetEnumerator();
+            while (it.MoveNext())
+            {
+                if (it.Current != "pagebreak") continue;
+                int dimIndex = screen.curDimIndex;
+                string font = screen.currentFont;
+                vm.queueAsync(async () =>
+                {
+                    int cp = screen.curPage, od = screen.curDimIndex;
+                    string of = screen.setFont(font);
+                    screen.curPage = 0;
+                    screen.setScreenDim(dimIndex);
+                    do { if (it.Current == "pagebreak") await this.textPageBreak(); } while (it.MoveNext());
+                    screen.setFont(of);
+                    screen.curPage = cp;
+                    screen.setScreenDim(od);
+                });
+                return;
+            }
         }
 
         public async Task textPageBreak()

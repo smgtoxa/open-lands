@@ -241,6 +241,11 @@ namespace LolHost
             {
                 Dom.Invoke(() => { var m = typeof(Web).GetMethod("loadFromSlot", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public); m.Invoke(web, new object[] { arg }); });
             }
+            else if (kind == "outro")   // outro:HERO - plays the ending for that lead hero (0 Kieran, 1 Ak'shel, 2 Michael, 3 Conrad)
+            {
+                int hero = int.Parse(arg, CultureInfo.InvariantCulture);
+                Dom.Invoke(() => { var e = Engine(); e?.queueAsync(() => e.showOutro(hero)); });
+            }
             else if (kind == "join")   // join:ID - a companion joins as Timothy does when saved (who waits is asked)
             {
                 int id = int.Parse(arg, CultureInfo.InvariantCulture);

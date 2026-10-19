@@ -304,8 +304,7 @@ namespace Lol
                 ["loadBitmap"] = Sync((s) =>
                 {
                     screen.loadBitmap(res.get(STR(s, 0)), 3, screen.getPalette(3));
-                    if (A(s, 1) != 2) screen.copyPage(3, A(s, 1));
-                    else screen.copyPage(3, 2);
+                    if (A(s, 1) != 2) screen.copyPage(3, A(s, 1));   // page 2 shares page 3's buffer: nothing to copy there
                     return 1;
                 }),
                 ["stopBackgroundAnimation"] = Sync((s) => { tim.animator.stop(A(s, 0)); return 1; }),
@@ -318,7 +317,8 @@ namespace Lol
                         case 0: return currentBlock; case 1: return currentDirection; case 2: return currentLevel; case 3: return itemInHand;
                         case 4: return brightness; case 5: return credits; case 6: return globalScriptVars2[A(s, 1)]; case 8: return updateFlags;
                         case 9: return lampOilStatus; case 10: return sceneDefaultUpdate; case 11: return compassBroken; case 12: return drainMagic;
-                        case 13: return speechEnabled() ? (textEnabled() ? 2 : 1) : 0; case 14: return tim.abortFlag; default: return 0;
+                        case 13: return speechEnabled() ? 0x4b : 0;   // the original's speech volume byte (default 0x4b, 0 = no voices)
+                        case 14: return tim.abortFlag; default: return 0;
                     }
                 }),
                 ["setGlobalVar"] = async (s) =>
@@ -744,16 +744,18 @@ namespace Lol
                 {
                     gui_notifyButtonListChanged();
                     snd_updateCharacterSpeech();
-                    var ev = events.Find((e) => e.type == "mousedown" || e.type == "key");
-                    removeInputTop();
+                    // the original takes one input: a release does nothing; otherwise a nonzero argument puts that same
+                    // input back for the game to handle, and 0 empties the whole queue
+                    var ev = events.Count > 0 ? shiftEvent() : null;
                     if (ev == null) { timerUpdate(); update(); await delay(tickLength); return 0; }
-                    int evt = A(s, 0);
-                    if (evt != 0)
+                    if (ev.type != "mousedown" && ev.type != "key") return 0;
+                    if (A(s, 0) != 0)
                     {
-                        events.Add(evt == 65 ? new InputEvent { type = "mousedown", x = mouseX, y = mouseY, button = 1 } : evt == 66 ? new InputEvent { type = "mousedown", x = mouseX, y = mouseY, button = 2 } : new InputEvent { type = "key", key = "Enter" });
+                        events.Insert(0, ev);
                         preserveEvents = true;
                         seqTrigger = 1;
                     }
+                    else removeInputTop();
                     return 1;
                 },
                 ["printWindowText"] = async (s) =>
@@ -818,8 +820,8 @@ namespace Lol
                 ["removeLevelItem"] = async (s) => { await removeLevelItem(A(s, 0), A(s, 1)); return 1; },
                 ["savePage5"] = Sync((s) => 1),
                 ["restorePage5"] = Sync((s) => { for (int i = 0; i < 6; i += 1) tim.freeAnimStruct(i); return 1; }),
-                ["initDialogueSequence"] = Sync((s) => { initDialogueSequence(A(s, 0), A(s, 1)); return 1; }),
-                ["restoreAfterDialogueSequence"] = Sync((s) => { restoreAfterDialogueSequence(A(s, 0)); return 1; }),
+                ["initDialogueSequence"] = async (s) => { await initDialogueSequence(A(s, 0), A(s, 1)); return 1; },
+                ["restoreAfterDialogueSequence"] = async (s) => { await restoreAfterDialogueSequence(A(s, 0)); return 1; },
                 ["setSpecialSceneButtons"] = Sync((s) => { setSpecialSceneButtons(A(s, 0), A(s, 1), A(s, 2), A(s, 3), A(s, 4)); return 1; }),
                 ["restoreButtonsAfterSpecialScene"] = Sync((s) => { gui_specialSceneRestoreButtons(); return 1; }),
                 ["prepareSpecialScene"] = async (s) => { await prepareSpecialScene(A(s, 0), A(s, 1), A(s, 2), A(s, 3), A(s, 4), A(s, 5)); return 1; },

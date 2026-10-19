@@ -712,7 +712,7 @@ namespace Lol
                 if (x < b.absX || y < b.absY || x > b.absX + b.width || y > b.absY + b.height) continue;
                 int accepts = mouseButton == 2 ? b.flags & 0x5000 : b.flags & 0x0500;
                 if (accepts == 0) continue;
-                b.flags2 = mouseButton == 2 ? 0x1080 : 0x1000;
+                b.flags2 = mouseButton == 2 ? 0x1000 : 0x100;   // as the original's button list: left 0x100, right 0x1000
                 hits.Add(b);
             }
             return hits;
@@ -1010,10 +1010,11 @@ namespace Lol
             gui_drawCharPortraitWithStats(activeMagicMenu);
             activeMagicMenu = -1;
             gui_enableDefaultPlayfieldButtons();
-            if ((button.flags2 & 0x80) == 0)
+            // button is null when a quick cast closes the menu: nothing to send on then
+            if (button != null && (button.flags2 & 0x80) == 0)
             {
-                // re-dispatch the click against the restored button list
-                var b = findButtonForClick(mouseX, mouseY, (button.flags2 & 0x1080) != 0 ? 2 : 1);
+                // re-dispatch the click against the restored button list (0x100 = it was a left click)
+                var b = findButtonForClick(mouseX, mouseY, (button.flags2 & 0x100) != 0 ? 1 : 2);
                 if (b != null && b.callback != null) await b.callback(b);
             }
             return 1;
@@ -1190,7 +1191,7 @@ namespace Lol
             {
                 inventory[slot] = 0;
                 gui_drawInventoryItem(button.arg);
-                snd_playSoundEffect(99, -1);
+                snd_playRawSoundEffect(99);   // raw driver effect 99, as the original
                 await playWsaInBox("TRUTH.WSA", button.x, button.y - 3, 25, 27, 25, 7);
                 deleteItem(slotItem);
                 deleteItem(hItem);
@@ -1217,7 +1218,7 @@ namespace Lol
             {
                 // Bezel cup + Ruby of Truth combine, like clickedInventorySlot without the box animation
                 inventory[slot] = 0;
-                snd_playSoundEffect(99, -1);
+                snd_playRawSoundEffect(99);   // raw driver effect 99, as the original
                 deleteItem(slotItem);
                 deleteItem(hItem);
                 await setHandItem(0);
@@ -1419,10 +1420,10 @@ namespace Lol
                 gui_drawAllCharPortraitsWithStats();
                 txt.printMessage(0x8000, getLangString(0x4057));
                 gui_toggleButtonDisplayMode(77, 0);
-                // JS float division then Math.trunc (600 / 0 is Infinity, which Math.min clamps)
-                int h = (int)Math.Min(30, Math.Truncate(600.0 / tHp));
-                int m = (int)Math.Min(30, Math.Truncate(600.0 / tMp));
-                int a = tHa > 0 ? (int)Math.Min(15, Math.Truncate(600.0 / tHa)) : 15;
+                // the original's intervals (ticks per point): 600 / max + 1, capped at 30; poison (600 / hp + 1) / 2, capped at 15
+                int h = tHp > 0 ? Math.Min(30, 600 / tHp + 1) : 30;
+                int m = tMp > 0 ? Math.Min(30, 600 / tMp + 1) : 30;
+                int a = tHa > 0 ? Math.Min(15, (600 / tHa + 1) >> 1) : 15;
                 double delay1 = getMillis() + h * tickLength;
                 double delay2 = getMillis() + m * tickLength;
                 double delay3 = getMillis() + a * tickLength;
@@ -1441,7 +1442,7 @@ namespace Lol
                 restInterrupted = false;
                 do
                 {
-                    for (int i = 0; i < 8; i += 1)
+                    for (int i = 0, im = smoothScrollModeNormal != 0 ? 8 : 4; i < im; i += 1)
                     {
                         timerProcessMonsters(0);
                         timerProcessMonsters(1);
@@ -1450,9 +1451,13 @@ namespace Lol
                         await drainAsync();
                         if (partyAwake) break;
                     }
+                    // a button release only refreshes the buttons; any other input wakes the party and is then
+                    // handled as usual (the original puts it back in the queue). The camp's Escape is the host's own
+                    // "leave" signal and is used up here.
+                    while (events.Count != 0 && events[0].type == "mouseup") shiftEvent();
                     if (events.Count != 0)
                     {
-                        removeInputTop();
+                        if (campMode) removeInputTop();
                         break;
                     }
                     if (!partyAwake)

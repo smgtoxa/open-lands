@@ -268,7 +268,8 @@ namespace Lol
             Func<Span16, Task<int>> one = p => Task.FromResult(1);
             this.commands = new Func<Span16, Task<int>>[]
             {
-                p => Task.FromResult(this.cmd_initFunc0()), p => this.cmd_stopAllFuncs(), p => this.cmd_initWSA(p), p => Task.FromResult(this.cmd_uninitWSA(p)),
+                // command 1: the cinematics' interpreter (intro, ending) ends the sequence; the in-game one waits for the dialogue
+                p => Task.FromResult(this.cmd_initFunc0()), p => this.introMode ? Task.FromResult(this.cmd_stopCurFunc()) : this.cmd_stopAllFuncs(), p => this.cmd_initWSA(p), p => Task.FromResult(this.cmd_uninitWSA(p)),
                 p => Task.FromResult(this.cmd_initFunc(p)), p => Task.FromResult(this.cmd_stopFunc(p)), p => Task.FromResult(this.cmd_wsaDisplayFrame(p)), p => Task.FromResult(this.cmd_displayText(p)),
                 p => Task.FromResult(this.cmd_loadVocFile(p)), p => Task.FromResult(this.cmd_unloadVocFile(p)), p => Task.FromResult(this.cmd_playVocFile(p)), null,
                 p => Task.FromResult(this.cmd_loadSoundFile(p)), one, p => Task.FromResult(this.cmd_playMusicTrack(p)), null,
@@ -621,13 +622,19 @@ namespace Lol
         public int cmd_displayText(Span16 param)
         {
             // JS also tests `this.vm.cineDisplayText` (a method, always there)
-            if (this.introMode) this.vm.cineDisplayText(param[0], (short)param[1], this.currentTim.isLoLOutro ? 0xf2 : 0);
+            if (this.introMode)
+            {
+                if (this.currentTim.isLoLOutro) this.vm.cineDisplayTextOutro(param[0], (short)param[1], 0xf2);
+                else this.vm.cineDisplayText(param[0], (short)param[1], 0);
+            }
             return 1;
         }
 
         public int cmd_loadVocFile(Span16 param)
         {
             string name = this.textString(this.currentTim, param[0]);
+            // the ending's voice slot 2 is the lead hero's own congratulation (CONGRATK/A/M/C)
+            if (param[1] == 2 && this.currentTim.isLoLOutro && (uint)this.currentTim.lolCharacter < 4) name = $"CONGRAT{"KAMC"[this.currentTim.lolCharacter]}.VOC";
             SetVocFile(param[1], name.Length > 4 ? name.Substring(0, name.Length - 4) : "");   // slice(0, -4)
             return 1;
         }

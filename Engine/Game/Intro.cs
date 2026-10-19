@@ -97,6 +97,39 @@ namespace Lol
             else cineFadeParams(pal, fadePalette);
         }
 
+        byte[] outroTextBuffer;
+
+        /// <summary>The ending's own text routine (TIMInterpreter::displayText with a colour): lines at the top of the
+        /// screen in the intro font; flags > 0 first puts back what was under the last text, 255 only does that, 0
+        /// saves the area first. No text palette.</summary>
+        public void cineDisplayTextOutro(int textId, int flags, int color)
+        {
+            if (!textEnabledFlag && (textId & 0x8000) == 0) return;
+            string text = cineTableEntry(textId & 0x7fff) ?? "";
+            if (flags > 0 && outroTextBuffer != null) screen.copyBlockToPage(0, 0, 0, 320, 40, outroTextBuffer);
+            if (flags == 255) return;
+            string cf = screen.setFont("intro");
+            var savedColors = screen.textColors.ToArray();
+            screen.setTextColor(new byte[] { 0x00, 0xa0, 0xa1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, 0);
+            int spacing = screen.charSpacing;
+            screen.charSpacing = 0;
+            if (flags == 0) outroTextBuffer = screen.copyRegionToBuffer(0, 0, 0, 320, 40);
+            int cp = screen.curPage;
+            screen.curPage = 0;
+            int y = 0;
+            foreach (var line in text.Split('\r'))
+            {
+                if (line.Length == 0) continue;
+                int width = screen.textWidth(line);
+                screen.printText(line, flags >= 0 ? (320 - width) >> 1 : 0, y, color, 0x00);
+                y += screen.fontHeight() - 4;
+            }
+            screen.curPage = cp;
+            screen.charSpacing = spacing;
+            screen.setTextColor(savedColors, 0);
+            screen.setFont(cf);
+        }
+
         // TIMInterpreter::displayText: a line of intro text (voice file in $...$), centred at y=160 (or 188 for flags < 0).
         public void cineDisplayText(int textId, int flags, int color)
         {
@@ -194,7 +227,7 @@ namespace Lol
                 checkedPageUpdate(8, 4);
                 return Task.FromResult(1);
             };
-            Func<TimScript, Span16, Task<int>> displayText = (tim, p) => { cineDisplayText(p[0], (short)p[1], outro ? p[2] : 0); return Task.FromResult(1); };
+            Func<TimScript, Span16, Task<int>> displayText = (tim, p) => { if (outro) cineDisplayTextOutro(p[0], (short)p[1], p[2]); else cineDisplayText(p[0], (short)p[1], 0); return Task.FromResult(1); };
             if (!outro) return new[] { setupPaletteFade, null, loadPalette, setupPaletteFadeEx, processWsaFrame, displayText, null, null };
             return new Func<TimScript, Span16, Task<int>>[]
             {
@@ -207,9 +240,13 @@ namespace Lol
                     screen.copyRegion(0, 0, 0, 0, 320, 200, 0, 2, true);
                     if (res.exists($"{sceneFile}.CPS")) screen.loadBitmap(res.get($"{sceneFile}.CPS"), 4, screen.getPalette(0));
                     var overlay = res.exists(overlayFile) ? res.get(overlayFile) : null;
+                    // the overlay is a 64 KB blend table indexed by (new colour << 8 | old colour), applied 3 times
+                    var src = screen.page(4);
+                    var dst = screen.page(2);
                     for (int i = 0; i < 3; i += 1)
                     {
-                        if (overlay != null) screen.copyBlockAndApplyOverlay(4, 0, 0, 2, 0, 0, 320, 200, 0, Js.Slice(overlay, i * 256, i * 256 + 256));
+                        if (overlay != null && overlay.Length >= 0x10000)
+                            for (int k = 0; k < SCREEN_W * SCREEN_H; k += 1) dst[k] = overlay[(src[k] << 8) | dst[k]];
                         screen.copyRegion(0, 0, 0, 0, 320, 200, 2, 0, true);
                         await delay(10 * tickLength);
                     }
@@ -226,16 +263,24 @@ namespace Lol
                     return 1;
                 },
                 null, null,
-                (tim, p) => { snd_stopMusic(); return Task.FromResult(1); }, // fadeOutSound
+                (tim, p) => { snd_fadeOutMusic(); return Task.FromResult(1); }, // fadeOutSound: a fade only, the track is not stopped
                 (tim, p) =>
                 { // displayAnimFrame
                     int animIndex = tim.wsa[p[0]].anim - 1;
                     var animations = this.tim.animator.animations;
                     var anim = animIndex >= 0 && animIndex < animations.Length ? animations[animIndex] : null;
-                    if (anim != null && anim.wsa != null) anim.wsa.displayFrame(p[1], 0, anim.x, anim.y, 0, null, null);
+                    if (anim == null || anim.wsa == null) return Task.FromResult(1);
+                    // 0xFFFF keeps the screen as the base for the next frames; a frame is drawn on page 2 and its
+                    // rectangle copied to the screen
+                    if (p[1] == 0xffff) screen.copyRegion(0, 0, 0, 0, 320, 200, 0, 2, true);
+                    else
+                    {
+                        anim.wsa.displayFrame(p[1], 2, anim.x, anim.y, 0, null, null);
+                        screen.copyRegion(anim.x + anim.wsa.xAdd, anim.y + anim.wsa.yAdd, anim.x + anim.wsa.xAdd, anim.y + anim.wsa.yAdd, anim.wsa.width, anim.wsa.height, 2, 0);
+                    }
                     return Task.FromResult(1);
                 },
-                async (tim, p) => { await delay(p[0] * tickLength); return 1; }, // delayForChat
+                async (tim, p) => { if (!speechEnabledFlag) await delay(p[0] * tickLength); return 1; }, // delayForChat: only without voices
                 displayText, null,
             };
         }
@@ -310,69 +355,242 @@ namespace Lol
             return await runCinematic("LOLINTRO.TIM", "LOLINTRO.DIP", INTRO_PAKS, false);
         }
 
-        // Ending: the final TIM, then the scrolling credits.
+        // Ending (FINALE.EXE): the final TIM, the credits, then the lead hero's picture. After the picture the
+        // original waits for a key: Esc ends, any other key plays the whole ending again.
         public async Task showOutro(int character = 0)
         {
             onCall?.Invoke("showOutro", new object[] { character });   // the host's wrapper (main.mjs wrapCount)
-            await runCinematic("LOLFINAL.TIM", "LOLFINAL.DIP", OUTRO_PAKS, true, character);
-            await showCredits();
+            outroPlaying = true;
+            try
+            {
+                while (!quit)
+                {
+                    await runCinematic("LOLFINAL.TIM", "LOLFINAL.DIP", OUTRO_PAKS, true, character);
+                    if (quit) return;
+                    await showCredits();
+                    if (quit || !await showHeroPicture(character)) return;
+                }
+            }
+            finally { outroPlaying = false; }
+        }
+
+        /// <summary>The ending is on (a program of its own in the original): the host hides what would be drawn in
+        /// its colours, the party's portraits.</summary>
+        public bool outroPlaying;
+
+        static readonly string[] OUTRO_HERO_PICTURES = { "KIERAN.CPS", "AK'SHEL.CPS", "MICHAEL.CPS", "CONRAD.CPS" };
+
+        /// <summary>The lead hero's picture (and the hardest difficulty's extra line); true when a key other than
+        /// Esc asks for the ending again.</summary>
+        async Task<bool> showHeroPicture(int character)
+        {
+            var pal = screen.getPalette(0);
+            Js.Fill(pal, (byte)0);
+            string pic = (uint)character < 4 ? OUTRO_HERO_PICTURES[character] : null;
+            if (pic != null && res.exists(pic)) screen.loadBitmap(res.get(pic), 0, pal);
+            else screen.clearPage(0);
+            if (monsterDifficulty == 2 && res.exists("LOLFINAL.DIP"))
+            {
+                tim.langData = res.get("LOLFINAL.DIP");
+                cineDisplayTextOutro(0x8000, 0, 0xdc);
+                tim.langData = null;
+            }
+            await screen.fadePalette(pal, 30);
+            events.Clear();
+            bool again = false;
+            while (!quit)
+            {
+                var ev = events.Count > 0 ? shiftEvent() : null;
+                if (ev != null && (ev.type == "key" || ev.type == "mousedown")) { again = ev.key != "Escape"; break; }
+                await delay(tickLength);
+            }
+            await screen.fadeToBlack(30);
+            return again;
+        }
+
+        // The ending's animated credits (processCredits): CREDITS.TXT scrolls up over ROOM.CPS while a monster
+        // after monster steps out of one of the two doors. The tables are FINALE.EXE's.
+        static readonly string[] OUTRO_SHAPE_FILES =
+        {
+            "AMAZON.SHP", "ARCHRSLG.SHP", "AVIANWRM.SHP", "BANDIT.SHP", "BOAR.SHP", "CABAL.SHP",
+            "GUARD.SHP", "HAG.SHP", "HORNET.SHP", "HURZELL.SHP", "IRONGRZR.SHP", "KNOWLES.SHP",
+            "LIZARD.SHP", "MANTHA.SHP", "MINOTAUR.SHP", "MORIBUND.SHP", "ORC.SHP", "ORCLDR.SHP",
+            "PENTROG.SHP", "RATMAN.SHP", "ROCKLING.SHP", "SCAVNGR.SHP", "STARK.SHP",
+            "SWAMPCIT.SHP", "SWAMPMON.SHP", "THUG.SHP", "VIPER.SHP", "XEOB.SHP",
+        };
+        static readonly int[] OUTRO_FRAMES = { 0, 0, 0, 0, 0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 8, 9, 10, 11, 4, 5, 6, 7 };
+        static readonly int[] OUTRO_RIGHT_MONSTER =
+        {
+            205, 55, 205, 55, 205, 55, 205, 55, 205, 56, 207, 57, 208, 58, 210, 59, 213, 60, 216, 61, 220, 61, 225, 61,
+            230, 61, 235, 61, 240, 61, 240, 61, 240, 61, 240, 61, 240, 61, 240, 61, 240, 61, 265, 61, 290, 61, 315, 61,
+        };
+        static readonly int[] OUTRO_LEFT_MONSTER =
+        {
+            92, 55, 92, 55, 92, 55, 92, 55, 92, 56, 90, 57, 85, 58, 77, 59, 67, 60, 57, 61, 47, 61, 35, 61,
+            35, 61, 35, 61, 35, 61, 35, 61, 35, 61, 35, 61, 35, 61, 35, 61, 35, 61, 10, 61, -20, 61, -45, 61,
+        };
+        static readonly int[] OUTRO_RIGHT_DOOR =
+        {
+            200, 41, 200, 29, 200, 17, 200, 5, 200, -7, 200, -7, 200, -7, 200, -7, 200, 5, 200, 17, 200, 29, 200, 41,
+            200, 41, 200, 41, 200, 41, 200, 41, 200, 41, 200, 41, 200, 41, 200, 41, 200, 41, 200, 41, 200, 41, 200, 41,
+        };
+        static readonly int[] OUTRO_LEFT_DOOR =
+        {
+            72, 41, 72, 29, 72, 17, 72, 5, 72, -7, 72, -7, 72, -7, 72, -7, 72, 5, 72, 17, 72, 29, 72, 41,
+            72, 41, 72, 41, 72, 41, 72, 41, 72, 41, 72, 41, 72, 41, 72, 41, 72, 41, 72, 41, 72, 41, 72, 41,
+        };
+        static readonly int[] OUTRO_SCALE_X = { 0x50, 0x50, 0x50, 0x50, 0x50, 0x5d, 0x70, 0x85, 0xa0, 0xc0, 0xe2, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100 };
+        static readonly int[] OUTRO_SCALE_Y = { 0x4c, 0x4c, 0x4c, 0x4c, 0x4c, 0x59, 0x6b, 0x80, 0x99, 0xb8, 0xd9, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100, 0x100 };
+
+        sealed class CreditLine { public int x, y, height; public string text; public char code; }
+
+        Shape[] loadOutroShapes(int file)
+        {
+            var all = LolShapes.decodeShapeFile(Cps.decodeBitmapData(res.get(OUTRO_SHAPE_FILES[file])).data);
+            var shapes = new Shape[12];
+            for (int i = 0; i < 12; i += 1) { int k = i < 8 ? i : i + 4; shapes[i] = k < all.Length ? all[k] : null; }
+            return shapes;
         }
 
         public async Task showCredits()
         {
             var screen = this.screen;
-            if (!res.exists("CREDITS.TXT")) return;
+            if (!res.exists("CREDITS.TXT") || !res.exists("ROOM.CPS")) return;
+            snd_stopMusic();
+            snd_loadSoundFileByName("LOREFINL");
+            snd_playRawTrack(4);
+            var pal = screen.getPalette(0);
+            screen.loadBitmap(res.get("ROOM.CPS"), 2, pal);
+            pal[255 * 3] = pal[255 * 3 + 1] = pal[255 * 3 + 2] = 0;
+            await screen.fadeToBlack(30);
+            screen.copyRegion(0, 0, 0, 0, 320, 200, 2, 0, true);
             var raw = res.get("CREDITS.TXT");
             var sb = new StringBuilder();
-            for (int i = 0; i < raw.Length; i += 1) sb.Append((char)raw[i]);
-            string text = sb.ToString();
-            // Entries end with \x05 (next entry stays on the same line) or \r (new line); a leading \x03 aligns
-            // left, \x04 right, otherwise centred; \x01/\x02 are style markers.
-            string cf = screen.setFont("6");
-            int lh = screen.fontHeight();
-            int gap = lh >> 3;
-            var entries = new List<(string text, int x, int y)>();
-            int y = 200;
-            bool sameLine = false;
-            foreach (var part in Regex.Split(text, "(?<=[\\x05\\r])"))
-            {
-                if (part.Length == 0) continue;
-                char code = part[part.Length - 1];
-                string body = Regex.Replace(part, "[\\x05\\r]\\z", "");
-                int align = 0;
-                if (body.Length > 0 && (body[0] == '\x03' || body[0] == '\x04')) { align = body[0]; body = body.Substring(1); }
-                body = Regex.Replace(Regex.Replace(body, "^[\\x01\\x02]", ""), "[\\x01-\\x1f]", "");
-                if (!sameLine && entries.Count != 0) y += lh + gap;
-                int width = screen.textWidth(body);
-                int x = align == 3 ? 0 : align == 4 ? 300 - width : (320 - width) >> 1;
-                if (body.Length != 0) entries.Add((body, x, y));
-                sameLine = code == '\x05';
-            }
-            int total = y + lh + 40;
-            screen.clearPage(0);
-            var pal = screen.getPalette(0);
-            Js.Fill(pal, (byte)0);
-            pal[0xf0 * 3] = 0x3f; pal[0xf0 * 3 + 1] = 0x3a; pal[0xf0 * 3 + 2] = 0x28;
-            screen.setScreenPalette(pal);
-            events.Clear();
-            int cp = screen.curPage;
-            screen.curPage = 0;
-            for (int scroll = 0; scroll < total && !quit; scroll += 1)
+            foreach (byte c in raw) sb.Append((char)c);
+            await processCredits(sb.ToString(), 21, 4, 5);
+            double end = getMillis() + 120 * tickLength;
+            while (getMillis() < end && !quit)
             {
                 if (events.Any(ev => ev.type == "key" || ev.type == "mousedown")) break;
-                screen.clearPage(0);
-                foreach (var e in entries)
-                {
-                    int yy = e.y - scroll;
-                    if (yy < 0 || yy > 200 - lh) continue;
-                    screen.printText(e.text, e.x, yy, 0xf0, 0);
-                }
                 await delay(tickLength);
             }
-            screen.curPage = cp;
-            screen.setFont(cf);
             events.Clear();
-            await screen.fadeToBlack(20);
+            snd_stopMusic();
+            await screen.fadeToBlack(30);
+            screen.clearPage(0);
+        }
+
+        async Task processCredits(string text, int dimState, int page, int delayTime)
+        {
+            var screen = this.screen;
+            screen.setScreenDim(dimState);
+            var dim = screen.curDim;
+            screen.clearPage(page);
+            screen.clearPage(6);
+            var door = res.exists("DOOR.SHP") ? LolShapes.decodeShapeFile(Cps.decodeBitmapData(res.get("DOOR.SHP")).data)[0] : null;
+            screen.drawShape(0, door, 0, 0, 22, DRAWSHP.WINREL);
+            screen.drawShape(0, door, 0, 0, 23, DRAWSHP.WINREL | DRAWSHP.XFLIP);
+            int curShapeFile = 0;
+            var shapes = loadOutroShapes(curShapeFile++);
+            var monsterPal = res.exists("MONSTERS.PAL") ? res.get("MONSTERS.PAL") : null;
+            var pal = screen.getPalette(0);
+            if (monsterPal != null) Array.Copy(monsterPal, 0, pal, 88 * 3, 40 * 3);
+            await screen.fadePalette(pal, 30);
+            var shapeTable = new byte[256];
+            for (int i = 0; i < 255; i += 1) shapeTable[i] = (byte)i;   // 255 -> 0
+            var lines = new List<CreditLine>();
+            int pos = 0;
+            int frameCounter = 0, monsterAnimFrame = 0;
+            bool needNewShape = false, doorRedraw = true;
+            if (res.exists("NEW6P.FNT")) screen.loadFont("new6", res.get("NEW6P.FNT"));   // the ending's own small font
+            string savedFont = screen.setFont(res.exists("NEW6P.FNT") ? "new6" : "6");
+            int savedSpacing = screen.charSpacing, savedLine = screen.lineSpacing;
+            screen.charSpacing = 0;
+            screen.lineSpacing = 0;
+            events.Clear();
+            double waitTimer = getMillis();
+            bool pressed = false;
+            do
+            {
+                while (getMillis() < waitTimer && !quit) await delay(tickLength);
+                waitTimer = getMillis() + delayTime * tickLength;
+                while (lines.Count < 35 && pos < text.Length)
+                {
+                    var last = lines.Count > 0 ? lines[lines.Count - 1] : null;
+                    int y = last == null ? dim.h : last.y + last.height + (last.height >> 3);
+                    int stop = text.IndexOfAny(new[] { '\x05', '\r' }, pos);
+                    if (stop < 0) stop = text.Length;
+                    string body = text.Substring(pos, stop - pos);
+                    char code = stop < text.Length ? text[stop] : '\0';
+                    pos = stop < text.Length ? stop + 1 : stop;
+                    int align = 0;
+                    if (body.Length > 0 && (body[0] == '\x03' || body[0] == '\x04')) { align = body[0]; body = body.Substring(1); }
+                    if (body.Length > 0 && (body[0] == '\x01' || body[0] == '\x02')) body = body.Substring(1);
+                    int h = screen.fontHeight();
+                    int x = align == 3 ? 0 : align == 4 ? 300 - screen.textWidth(body) : ((dim.w << 3) - screen.textWidth(body)) / 2;
+                    if (last != null && last.code == '\x05') y -= last.height + (last.height >> 3);
+                    lines.Add(new CreditLine { x = x, y = y, height = h, text = body, code = code });
+                }
+                frameCounter += 1;
+                if (frameCounter % 3 != 0) screen.copyRegion(0, 0, 0, 0, 320, 200, 6, page, true);
+                else if (monsterAnimFrame == 0 && doorRedraw)
+                {
+                    screen.copyRegion(0, 0, 0, 0, 320, 200, 2, page, true);
+                    screen.drawShape(page, door, 0, 0, 22, DRAWSHP.WINREL);
+                    screen.drawShape(page, door, 0, 0, 23, DRAWSHP.WINREL | DRAWSHP.XFLIP);
+                    frameCounter -= 1;
+                    doorRedraw = false;
+                }
+                else
+                {
+                    if (monsterAnimFrame == 0) screen.setScreenPalette(pal);
+                    screen.copyRegion(0, 0, 0, 0, 320, 200, 2, page, true);
+                    var monster = shapes[OUTRO_FRAMES[monsterAnimFrame]];
+                    bool right = ((curShapeFile - 1) & 1) != 0;
+                    int f2 = monsterAnimFrame * 2;
+                    int doorSD = right ? 23 : 22;
+                    int doorX = right ? OUTRO_RIGHT_DOOR[f2] : OUTRO_LEFT_DOOR[f2], doorY = right ? OUTRO_RIGHT_DOOR[f2 + 1] : OUTRO_LEFT_DOOR[f2 + 1];
+                    int mx = right ? OUTRO_RIGHT_MONSTER[f2] : OUTRO_LEFT_MONSTER[f2], my = right ? OUTRO_RIGHT_MONSTER[f2 + 1] : OUTRO_LEFT_MONSTER[f2 + 1];
+                    if (right) screen.drawShape(page, door, 0, 0, 22, DRAWSHP.WINREL);
+                    else screen.drawShape(page, door, 0, 0, 23, DRAWSHP.WINREL | DRAWSHP.XFLIP);
+                    int doorFlip = doorSD == 22 ? 0 : DRAWSHP.XFLIP;
+                    if (monsterAnimFrame >= 8) screen.drawShape(page, door, doorX, doorY, doorSD, doorFlip);
+                    int mflip = (!right || monsterAnimFrame < 20) ? 0 : DRAWSHP.XFLIP;
+                    screen.drawShape(page, monster, mx, my, 0, DRAWSHP.FADE | DRAWSHP.SCALE | mflip,
+                        new DrawShapeOpts { fadeTable = shapeTable, fadeLevel = 1, scaleW = OUTRO_SCALE_X[monsterAnimFrame], scaleH = OUTRO_SCALE_Y[monsterAnimFrame] });
+                    if (monsterAnimFrame < 8) screen.drawShape(page, door, doorX, doorY, doorSD, doorFlip);
+                    screen.copyRegion(0, 0, 0, 0, 320, 200, page, 6, true);
+                    doorRedraw = true;
+                    monsterAnimFrame = (monsterAnimFrame + 1) % 24;
+                    needNewShape = monsterAnimFrame == 0;
+                }
+                int cp = screen.curPage;
+                screen.curPage = page;
+                foreach (var l in lines)
+                {
+                    if (l.y < dim.h) screen.printText(l.text, (dim.sx << 3) + l.x, dim.sy + l.y, 0xdc, 0);
+                    l.y -= 1;
+                }
+                screen.curPage = cp;
+                screen.copyRegion(0, dim.sy, 0, dim.sy, 320, dim.h, page, 0, true);
+                if (lines.Count > 0 && lines[0].y < -10) lines.RemoveAt(0);
+                if (needNewShape)
+                {
+                    curShapeFile += 1;
+                    if (curShapeFile == 16) curShapeFile += 2;
+                    if (curShapeFile == 6) curShapeFile += 2;
+                    curShapeFile %= 28;
+                    shapes = loadOutroShapes(curShapeFile);
+                    if (monsterPal != null) { Array.Copy(monsterPal, curShapeFile * 40 * 3, pal, 88 * 3, 40 * 3); screen.setScreenPalette(pal); }
+                    needNewShape = false;
+                }
+                pressed = events.Any(ev => ev.type == "key" || ev.type == "mousedown");
+                events.Clear();
+            } while (lines.Count > 0 && !pressed && !quit);
+            screen.charSpacing = savedSpacing;
+            screen.lineSpacing = savedLine;
+            screen.setFont(savedFont);
+            screen.setScreenDim(0);
         }
     }
 }
